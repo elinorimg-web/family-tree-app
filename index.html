@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>מערכת אילנות יוחסין</title>
+    <style>
+        body { font-family: system-ui, sans-serif; background: #f4f6f9; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        h1, h2 { color: #1a56db; }
+        .box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        input, select, button { padding: 10px; margin: 5px 0; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 15px; }
+        button { background: #1a56db; color: white; border: none; cursor: pointer; font-weight: bold; }
+        button:hover { background: #1e40af; }
+        .person-card { background: #eff6ff; border-right: 4px solid #1a56db; padding: 10px; margin: 8px 0; border-radius: 6px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🌳 ניהול אילנות יוחסין (ללא הגבלה)</h1>
+    <div class="box">
+        <h2>1. בחירה או יצירת אילן חדש</h2>
+        <select id="treeSelect" onchange="loadTreeData()" style="width: 100%; font-weight: bold;">
+            <option value="">-- בחרי אילן קיים --</option>
+        </select>
+        <hr>
+        <div class="grid">
+            <input type="email" id="userEmail" placeholder="האימייל שלך (לשיוך האילן)">
+            <input type="text" id="treeTitle" placeholder="שם האילן החדש (למשל: משפחת כהן)">
+        </div>
+        <button onclick="createTree()">+ צור אילן חדש</button>
+    </div>
+
+    <div id="workspace" style="display:none;">
+        <div class="grid">
+            <div class="box">
+                <h2>2. הוספת אדם לאילן</h2>
+                <input type="text" id="firstName" placeholder="שם פרטי *" style="width:90%"><br>
+                <input type="text" id="lastName" placeholder="שם משפחה" style="width:90%"><br>
+                <select id="gender" style="width:95%">
+                    <option value="male">זכר</option>
+                    <option value="female">נקבה</option>
+                    <option value="unknown">לא ידוע</option>
+                </select><br>
+                <input type="text" id="birthApprox" placeholder="שנת/תאריך לידה (למשל: 1920)" style="width:90%"><br>
+                <input type="text" id="birthPlace" placeholder="מקום לידה" style="width:90%"><br>
+                <button onclick="addPerson()">+ הוסף אדם לאילן</button>
+            </div>
+
+            <div class="box">
+                <h2>3. הגדרת קשר הורה - ילד</h2>
+                <label>בחרי הורה:</label><br>
+                <select id="parentSelect" style="width:95%"></select><br><br>
+                <label>בחרי ילד/ה:</label><br>
+                <select id="childSelect" style="width:95%"></select><br><br>
+                <button onclick="addRelationship()">🔗 חבר הורה וילד</button>
+            </div>
+        </div>
+
+        <div class="box">
+            <h2>👥 האנשים באילן זה:</h2>
+            <div id="peopleList"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentTreeId = null;
+
+    async function loadTrees() {
+        const res = await fetch('/api/trees');
+        const trees = await res.json();
+        const select = document.getElementById('treeSelect');
+        select.innerHTML = '<option value="">-- בחרי אילן קיים --</option>';
+        trees.forEach(t => { select.innerHTML += `<option value="${t.tree_id}">${t.title}</option>`; });
+        if (currentTreeId) select.value = currentTreeId;
+    }
+
+    async function createTree() {
+        const email = document.getElementById('userEmail').value || 'admin@family.com';
+        const title = document.getElementById('treeTitle').value;
+        if (!title) return alert('נא להזין שם לאילן');
+        const res = await fetch('/api/trees', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, title })
+        });
+        const tree = await res.json();
+        if (tree.error) return alert('שגיאה: ' + tree.error);
+        currentTreeId = tree.tree_id;
+        document.getElementById('treeTitle').value = '';
+        await loadTrees();
+        loadTreeData();
+    }
+
+    async function loadTreeData() {
+        currentTreeId = document.getElementById('treeSelect').value;
+        if (!currentTreeId) { document.getElementById('workspace').style.display = 'none'; return; }
+        document.getElementById('workspace').style.display = 'block';
+
+        const res = await fetch(`/api/trees/${currentTreeId}/full`);
+        const data = await res.json();
+        
+        const list = document.getElementById('peopleList');
+        const pSel = document.getElementById('parentSelect');
+        const cSel = document.getElementById('childSelect');
+        list.innerHTML = ''; pSel.innerHTML = ''; cSel.innerHTML = '';
+
+        const namesMap = {};
+        data.people.forEach(p => {
+            const fullName = `${p.first_name} ${p.last_name || ''}`;
+            namesMap[p.person_id] = fullName;
+            pSel.innerHTML += `<option value="${p.person_id}">${fullName}</option>`;
+            cSel.innerHTML += `<option value="${p.person_id}">${fullName}</option>`;
+        });
+
+        data.people.forEach(p => {
+            const parents = data.relationships.filter(r => r.child_id === p.person_id).map(r => namesMap[r.parent_id]).join(', ');
+            list.innerHTML += `<div class="person-card">
+                <strong>${p.first_name} ${p.last_name || ''}</strong> (${p.birth_date_approx || 'ללא תאריך'}, ${p.birth_place || ''})
+                ${parents ? `<br><small>הורים: ${parents}</small>` : ''}
+            </div>`;
+        });
+    }
+
+    async function addPerson() {
+        const body = {
+            first_name: document.getElementById('firstName').value,
+            last_name: document.getElementById('lastName').value,
+            gender: document.getElementById('gender').value,
+            birth_date_approx: document.getElementById('birthApprox').value,
+            birth_place: document.getElementById('birthPlace').value
+        };
+        if (!body.first_name) return alert('חובה להזין שם פרטי');
+        await fetch(`/api/trees/${currentTreeId}/individuals`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        document.getElementById('firstName').value = '';
+        document.getElementById('birthApprox').value = '';
+        loadTreeData();
+    }
+
+    async function addRelationship() {
+        const parent_id = document.getElementById('parentSelect').value;
+        const child_id = document.getElementById('childSelect').value;
+        if (parent_id === child_id) return alert('אדם לא יכול להיות הורה של עצמו');
+        await fetch(`/api/trees/${currentTreeId}/relationships`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ parent_id, child_id })
+        });
+        loadTreeData();
+    }
+
+    loadTrees();
+</script>
+</body>
+</html>
