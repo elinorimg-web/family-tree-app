@@ -27,6 +27,17 @@
     <div id="workspace" style="display:none;">
         <div class="box" id="personFormBox">
             <h2 id="formTitle">2. הוספת אדם לאילן</h2>
+
+            <!-- קישור מהיר לאדם קיים באילן -->
+            <div id="existingPersonBox" style="display:none; background:#eff6ff; border:1px solid #bfdbfe; padding:12px; border-radius:8px; margin-bottom:15px;">
+                <strong>🔗 אפשרות 1: בחרי אדם שכבר קיים באילן לחיבור מיידי:</strong><br>
+                <div style="display:flex; gap:10px; margin-top:6px;">
+                    <select id="existingPersonSelect" style="flex:1;"></select>
+                    <button id="btnLinkExisting" type="button" style="background:#0284c7;">חבר אדם קיים</button>
+                </div>
+                <div style="margin-top:8px; font-size:13px; color:#475569;"><strong>או אפשרות 2:</strong> מלאי את הפרטים למטה ליצירת אדם חדש:</div>
+            </div>
+
             <div class="grid">
                 <div>
                     <input type="text" id="firstName" placeholder="שם פרטי *" style="width:94%"><br>
@@ -44,12 +55,17 @@
                     <input type="text" id="birthPlace" placeholder="מקום לידה" style="width:94%"><br>
                     <label class="checkbox-row">
                         <input type="checkbox" id="isDeceased">
-                        <span>נפטר/ה (ז״ל) - מסגרת שחורה עבה</span>
+                        <span>נפטר/ה (ז״ל)</span>
                     </label>
-                    <div id="deathFieldContainer" style="display:none;">
-                        <input type="text" id="deathApprox" placeholder="שנת/תאריך פטירה" style="width:94%"><br>
+                    <div id="deathFieldContainer" style="display:none; padding-right:15px; border-right:2px solid #cbd5e1;">
+                        <select id="deathType" style="width:96%">
+                            <option value="regular">פטירה רגילה (מסגרת שחורה)</option>
+                            <option value="holocaust">נספה בשואה הי״ד (מסגרת שחורה + צהובה)</option>
+                            <option value="idf">חלל צה״ל ז״ל (מסגרת שחורה + כחולה)</option>
+                        </select><br>
+                        <input type="text" id="deathApprox" placeholder="שנת/תאריך פטירה (אופציונלי)" style="width:92%"><br>
                     </div>
-                    <input type="url" id="link1" placeholder="קישור 1 (ויקיפדיה / יזכור)" style="width:94%"><br>
+                    <input type="url" id="link1" placeholder="קישור 1 (ויקיפדיה / יזכור / יד ושם)" style="width:94%"><br>
                     <input type="url" id="link2" placeholder="קישור 2 נוסף" style="width:94%"><br>
                 </div>
             </div>
@@ -60,26 +76,24 @@
         </div>
 
         <div class="box">
-            <h2>🖼️ תרשים אילן היוחסין <small style="font-size: 13px; color: #64748b; font-weight: normal;">(לחצי קליק ימני על אדם להוספת אבא, אמא, אח, אחות או ילדים)</small></h2>
+            <h2>🖼️ תרשים אילן היוחסין <small style="font-size: 13px; color: #64748b; font-weight: normal;">(לחצי קליק ימני על אדם להוספת/חיבור קרובים)</small></h2>
             <div class="tree-canvas"><div id="treeDiagram" class="tree"></div></div>
         </div>
     </div>
 </div>
 
 <!-- תפריט קליק ימני צף -->
-<div id="contextMenu" style="display:none; position:fixed; background:white; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 4px 15px rgba(0,0,0,0.15); z-index:1000; min-width:170px; overflow:hidden;">
-    <div style="background:#f1f5f9; padding:8px 12px; font-size:12px; font-weight:bold; color:#475569; border-bottom:1px solid #e2e8f0;" id="ctxHeader">הוספת קרוב משפחה</div>
-    <div class="ctx-item" onclick="startRelativeAdd('father')">👨 הוסף אבא</div>
-    <div class="ctx-item" onclick="startRelativeAdd('mother')">👩 הוסף אמא</div>
-    <div class="ctx-item" onclick="startRelativeAdd('brother')">👦 הוסף אח</div>
-    <div class="ctx-item" onclick="startRelativeAdd('sister')">👧 הוסף אחות</div>
-    <div class="ctx-item" onclick="startRelativeAdd('son')">👶 הוסף בן</div>
-    <div class="ctx-item" onclick="startRelativeAdd('daughter')">👧 הוסף בת</div>
+<div id="contextMenu" style="display:none; position:fixed; background:white; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 4px 15px rgba(0,0,0,0.15); z-index:1000; min-width:190px; overflow:hidden;">
+    <div style="background:#f1f5f9; padding:8px 12px; font-size:12px; font-weight:bold; color:#475569; border-bottom:1px solid #e2e8f0;" id="ctxHeader">הוספת/חיבור קרוב</div>
+    <div class="ctx-item" onclick="startRelativeAdd('spouse_married')">💍 הוסף/חבר בן/בת זוג (נשואים)</div>
+    <div class="ctx-item" onclick="startRelativeAdd('spouse_divorced')">💔 הוסף/חבר גרוש/ה (קו מקווקו)</div>
+    <div class="ctx-item" onclick="startRelativeAdd('father')">👨 הוסף/חבר אבא</div>
+    <div class="ctx-item" onclick="startRelativeAdd('mother')">👩 הוסף/חבר אמא</div>
+    <div class="ctx-item" onclick="startRelativeAdd('brother')">👦 הוסף/חבר אח</div>
+    <div class="ctx-item" onclick="startRelativeAdd('sister')">👧 הוסף/חבר אחות</div>
+    <div class="ctx-item" onclick="startRelativeAdd('son')">👶 הוסף/חבר בן</div>
+    <div class="ctx-item" onclick="startRelativeAdd('daughter')">👧 הוסף/חבר בת</div>
 </div>
-<style>
-    .ctx-item { padding: 9px 14px; cursor: pointer; font-size: 14px; color: #1e293b; transition: background 0.15s; }
-    .ctx-item:hover { background: #eff6ff; color: #1a56db; font-weight: bold; }
-</style>
 
 <script src="ui.js"></script>
 <script src="app.js"></script>
