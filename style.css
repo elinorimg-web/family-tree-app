@@ -2,19 +2,17 @@ body { font-family: system-ui, sans-serif; background: #f4f6f9; margin: 0; paddi
 .container { max-width: 1200px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
 h1, h2 { color: #1a56db; }
 .box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-input[type="text"], input[type="email"], input[type="url"], select, button { padding: 10px; margin: 5px 0; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 14px; }
+input[type="text"], input[type="email"], input[type="url"], textarea, select, button { padding: 10px; margin: 5px 0; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 14px; font-family: inherit; }
 button { background: #1a56db; color: white; border: none; cursor: pointer; font-weight: bold; }
 button:hover { background: #1e40af; }
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 .checkbox-row { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-weight: bold; cursor: pointer; }
 .checkbox-row input { width: 17px; height: 17px; cursor: pointer; }
 
-/* אזור התרשים הווקטורי המדויק */
 .tree-canvas { overflow: auto; padding: 20px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; position: relative; min-height: 300px; direction: ltr; }
 .svg-board { position: relative; margin: 0 auto; }
 .svg-lines { position: absolute; top: 0; left: 0; pointer-events: none; }
 
-/* קוביית אדם ממוקמת במדויק */
 .node-card {
     position: absolute;
     width: 170px;
@@ -36,8 +34,21 @@ button:hover { background: #1e40af; }
 .node-occ { font-size: 11px; color: #475569; font-style: italic; margin-top: 2px; }
 .node-dates { font-size: 11px; color: #334155; margin-top: 3px; }
 .node-links { margin-top: 5px; display: flex; justify-content: center; gap: 4px; flex-wrap: wrap; }
-.ext-link { font-size: 10px; background: #e2e8f0; color: #1e293b; padding: 2px 6px; border-radius: 4px; text-decoration: none; font-weight: bold; }
-.ring-icon { position: absolute; font-size: 14px; background: white; border-radius: 50%; padding: 0 2px; z-index: 3; transform: translate(-50%, -50%); }
+.ext-link { font-size: 10px; background: #e2e8f0; color: #1e293b; padding: 2px 6px; border-radius: 4px; text-decoration: none; font-weight: bold; border: none; cursor: pointer; }
 
 .ctx-item { padding: 8px 14px; cursor: pointer; font-size: 13px; color: #1e293b; border-bottom: 1px solid #f1f5f9; direction: rtl; text-align: right; }
 .ctx-item:hover { background: #eff6ff; color: #1a56db; font-weight: bold; }
+
+/* חלונית קופצת (Modal) לסיפור חיים ולניתוק קשרים */
+.modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); z-index: 2000; align-items: center; justify-content: center; }
+.modal-box { background: white; padding: 22px; border-radius: 12px; max-width: 520px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); direction: rtl; text-align: right; }
+.rel-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 1px solid #e2e8f0; }
+
+/* מצב הדפסה / שמירה כ-PDF נקי */
+@media print {
+    body { background: white; padding: 0; }
+    .container { box-shadow: none; padding: 0; max-width: 100%; }
+    .no-print, .card-actions { display: none !important; }
+    .tree-canvas { border: none; overflow: visible; padding: 0; }
+    .node-card { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
