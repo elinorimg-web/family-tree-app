@@ -6,7 +6,7 @@ function formatFullName(p) {
     return [lastNames, p.first_name].filter(Boolean).join(' ').trim();
 }
 
-function buildPersonCardHTML(p) {
+function buildPersonCardHTML(p, isLineageChild = false) {
     const isDeceased = p.is_living === false;
     let statusClass = '';
     let suffix = '';
@@ -24,14 +24,16 @@ function buildPersonCardHTML(p) {
         '<button type="button" onclick="startEditPerson(\'' + p.person_id + '\')" style="padding:2px 7px;font-size:11px;background:#475569;">✏️ ערוך</button>' +
         '<button type="button" onclick="deletePerson(\'' + p.person_id + '\')" style="padding:2px 7px;font-size:11px;background:#dc2626;">🗑️ מחק</button></div>';
 
-    return '<div oncontextmenu="openContextMenu(event, \'' + p.person_id + '\')" class="node-card ' + (p.gender === 'female' ? 'female' : '') + ' ' + statusClass + '" title="קליק ימני להוספת/חיבור קרובים">' +
+    const lineageClass = isLineageChild ? 'lineage-child' : '';
+
+    return '<div oncontextmenu="openContextMenu(event, \'' + p.person_id + '\')" class="node-card ' + (p.gender === 'female' ? 'female' : '') + ' ' + statusClass + ' ' + lineageClass + '" title="קליק ימני להוספת/חיבור קרובים">' +
         '<div class="node-name">' + formatFullName(p) + suffix + '</div>' +
         (p.occupation ? '<div class="node-occ">' + p.occupation + '</div>' : '') +
         (dates || p.birth_place ? '<div class="node-dates">' + dates + (p.birth_place ? ' (' + p.birth_place + ')' : '') + '</div>' : '') +
         (linksHtml ? '<div class="node-links">' + linksHtml + '</div>' : '') + actionsHtml + '</div>';
 }
 
-function renderFamilyUnit(personId, peopleMap, childrenMap, unionsList, renderedPeople) {
+function renderFamilyUnit(personId, peopleMap, childrenMap, unionsList, renderedPeople, isChildInTree = false) {
     if (renderedPeople.has(personId) || !peopleMap[personId]) return '';
     renderedPeople.add(personId);
     const person = peopleMap[personId];
@@ -63,27 +65,28 @@ function renderFamilyUnit(personId, peopleMap, childrenMap, unionsList, rendered
         const isDivorced = marriedUnion.union_status === 'divorced';
         const badgeHtml = isDivorced ? '' : '<span class="spouse-badge">💍</span>';
 
-        let personCol = '<div style="display:flex; flex-direction:column; align-items:center;">' + buildPersonCardHTML(person);
+        // הצאצא הביולוגי מקבל סימון isChildInTree כדי שהקו מההורים שלו ירד בדיוק אליו
+        let personCol = '<div style="display:flex; flex-direction:column; align-items:center;">' + buildPersonCardHTML(person, isChildInTree);
         if (personOnlyChildren.length > 0) {
-            personCol += '<ul class="has-children">' + personOnlyChildren.map(cid => renderFamilyUnit(cid, peopleMap, childrenMap, unionsList, renderedPeople)).join('') + '</ul>';
+            personCol += '<ul class="has-children">' + personOnlyChildren.map(cid => renderFamilyUnit(cid, peopleMap, childrenMap, unionsList, renderedPeople, true)).join('') + '</ul>';
         }
         personCol += '</div>';
 
-        let spouseCol = '<div style="display:flex; flex-direction:column; align-items:center;">' + buildPersonCardHTML(primarySpouse);
+        // בן הזוג המצטרף לא מקבל קו מההורים של הצאצא
+        let spouseCol = '<div style="display:flex; flex-direction:column; align-items:center;">' + buildPersonCardHTML(primarySpouse, false);
         if (spouseOnlyChildren.length > 0) {
-            spouseCol += '<ul class="has-children">' + spouseOnlyChildren.map(cid => renderFamilyUnit(cid, peopleMap, childrenMap, unionsList, renderedPeople)).join('') + '</ul>';
+            spouseCol += '<ul class="has-children">' + spouseOnlyChildren.map(cid => renderFamilyUnit(cid, peopleMap, childrenMap, unionsList, renderedPeople, true)).join('') + '</ul>';
         }
         spouseCol += '</div>';
 
-        topHtml = '<div class="couple-wrap" style="align-items:flex-start;">' + personCol +
+        topHtml = '<div class="couple-wrap ' + (isChildInTree ? 'has-lineage-child' : '') + '" style="align-items:flex-start;">' + personCol +
             '<div class="spouse-line ' + (isDivorced ? 'divorced' : '') + '" style="margin-top:42px;">' + badgeHtml + '</div>' +
             spouseCol + '</div>';
     } else {
-        topHtml = buildPersonCardHTML(person);
+        topHtml = buildPersonCardHTML(person, isChildInTree);
         sharedChildren = personOnlyChildren;
     }
 
-    // הצגת בני זוג נוספים (גירושין קודמים) לצד היחידה
     let extraSpousesHtml = '';
     otherUnions.forEach(u => {
         const exId = u.partner_1_id === personId ? u.partner_2_id : u.partner_1_id;
@@ -92,8 +95,8 @@ function renderFamilyUnit(personId, peopleMap, childrenMap, unionsList, rendered
             renderedPeople.add(exId);
             const exChildren = (childrenMap[exId] || []).filter(cid => !sharedChildren.includes(cid) && !personOnlyChildren.includes(cid));
             extraSpousesHtml += '<div class="spouse-line divorced" style="margin-top:42px;"></div>' +
-                '<div style="display:flex; flex-direction:column; align-items:center;">' + buildPersonCardHTML(exSpouse) +
-                (exChildren.length > 0 ? '<ul class="has-children">' + exChildren.map(cid => renderFamilyUnit(cid, peopleMap, childrenMap, unionsList, renderedPeople)).join('') + '</ul>' : '') +
+                '<div style="display:flex; flex-direction:column; align-items:center;">' + buildPersonCardHTML(exSpouse, false) +
+                (exChildren.length > 0 ? '<ul class="has-children">' + exChildren.map(cid => renderFamilyUnit(cid, peopleMap, childrenMap, unionsList, renderedPeople, true)).join('') + '</ul>' : '') +
                 '</div>';
         }
     });
@@ -103,9 +106,9 @@ function renderFamilyUnit(personId, peopleMap, childrenMap, unionsList, rendered
     }
 
     const validShared = sharedChildren.filter(cid => peopleMap[cid] && !renderedPeople.has(cid));
-    let html = '<li>' + topHtml;
+    let html = '<li class="' + (primarySpouse && isChildInTree ? 'couple-child-node' : '') + '">' + topHtml;
     if (validShared.length > 0) {
-        html += '<ul class="has-children">' + validShared.map(cid => renderFamilyUnit(cid, peopleMap, childrenMap, unionsList, renderedPeople)).join('') + '</ul>';
+        html += '<ul class="has-children">' + validShared.map(cid => renderFamilyUnit(cid, peopleMap, childrenMap, unionsList, renderedPeople, true)).join('') + '</ul>';
     }
     return html + '</li>';
 }
