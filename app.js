@@ -13,78 +13,6 @@ document.getElementById('isDeceased').addEventListener('change', function() {
     if (!this.checked) { document.getElementById('deathApprox').value = ''; document.getElementById('deathType').value = 'regular'; }
 });
 
-function openContextMenu(e, personId) {
-    e.preventDefault();
-    contextTargetPersonId = personId;
-    const p = currentPeopleMap[personId];
-    document.getElementById('ctxHeader').textContent = 'קרובים עבור: ' + (p ? p.first_name : '');
-    const menu = document.getElementById('contextMenu');
-    menu.style.display = 'block';
-    menu.style.left = Math.min(e.clientX, window.innerWidth - 210) + 'px';
-    menu.style.top = e.clientY + 'px';
-}
-
-function startRelativeAdd(relType) {
-    const target = currentPeopleMap[contextTargetPersonId];
-    if (!target) return;
-    cancelEdit();
-    pendingRelation = { type: relType, targetId: contextTargetPersonId };
-
-    // מילוי רשימת אנשים קיימים לבחירה מהירה
-    const sel = document.getElementById('existingPersonSelect');
-    sel.innerHTML = '<option value="">-- בחרי אדם קיים מהאילן --</option>';
-    Object.values(currentPeopleMap).forEach(p => {
-        if (p.person_id !== contextTargetPersonId) {
-            sel.innerHTML += '<option value="' + p.person_id + '">' + formatFullName(p) + '</option>';
-        }
-    });
-    document.getElementById('existingPersonBox').style.display = 'block';
-
-    if (['father', 'brother', 'son'].includes(relType)) document.getElementById('gender').value = 'male';
-    else if (['mother', 'sister', 'daughter'].includes(relType)) document.getElementById('gender').value = 'female';
-    else document.getElementById('gender').value = target.gender === 'male' ? 'female' : 'male';
-
-    if (target.last_name && !['mother', 'spouse_married', 'spouse_divorced'].includes(relType)) {
-        document.getElementById('lastName').value = target.last_name;
-    }
-
-    const labels = {
-        spouse_married: '💍 הוספת/חיבור בן/בת זוג', spouse_divorced: '💔 הוספת/חיבור גרוש/ה',
-        father: '👨 הוספת/חיבור אבא', mother: '👩 הוספת/חיבור אמא',
-        brother: '👦 הוספת/חיבור אח', sister: '👧 הוספת/חיבור אחות',
-        son: '👶 הוספת/חיבור בן', daughter: '👧 הוספת/חיבור בת'
-    };
-    document.getElementById('formTitle').textContent = labels[relType] + ' עבור: ' + formatFullName(target);
-    document.getElementById('btnAddPerson').textContent = '💾 שמור אדם חדש וחבר';
-    document.getElementById('btnAddPerson').style.background = '#059669';
-    document.getElementById('btnCancelEdit').style.display = 'inline-block';
-    document.getElementById('personFormBox').scrollIntoView({ behavior: 'smooth' });
-}
-
-async function applyRelationBetween(relType, targetId, otherPersonId) {
-    if (relType === 'father' || relType === 'mother') {
-        await fetch('/api/trees/' + currentTreeId + '/relationships', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ parent_id: otherPersonId, child_id: targetId }) });
-    } else if (relType === 'son' || relType === 'daughter') {
-        await fetch('/api/trees/' + currentTreeId + '/relationships', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ parent_id: targetId, child_id: otherPersonId }) });
-    } else if (relType === 'brother' || relType === 'sister') {
-        const parents = currentRelationships.filter(r => r.child_id === targetId).map(r => r.parent_id);
-        if (parents.length === 0) alert('לאדם זה עדיין לא הוגדרו הורים, ולכן לא ניתן לקשר אחים אוטומטית. הוסיפי הורה קודם.');
-        for (const pid of parents) {
-            await fetch('/api/trees/' + currentTreeId + '/relationships', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ parent_id: pid, child_id: otherPersonId }) });
-        }
-    } else if (relType === 'spouse_married' || relType === 'spouse_divorced') {
-        const status = relType === 'spouse_divorced' ? 'divorced' : 'married';
-        await fetch('/api/trees/' + currentTreeId + '/unions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ partner_1_id: targetId, partner_2_id: otherPersonId, union_status: status }) });
-    }
-}
-
-async function linkExistingPerson() {
-    const existingId = document.getElementById('existingPersonSelect').value;
-    if (!existingId || !pendingRelation) return alert('נא לבחור אדם מהרשימה');
-    await applyRelationBetween(pendingRelation.type, pendingRelation.targetId, existingId);
-    cancelEdit(); loadTreeData();
-}
-
 async function loadTrees() {
     const res = await fetch('/api/trees');
     const trees = await res.json();
@@ -183,3 +111,42 @@ async function loadTreeData() {
     data.relationships.forEach(r => { if (childrenMap[r.parent_id]) { childrenMap[r.parent_id].push(r.child_id); hasParent.add(r.child_id); } });
 
     const renderedPeople = new Set();
+    const roots = data.people.filter(p => !hasParent.has(p.person_id));
+    let treeHtml = '<ul>';
+    roots.forEach(r => {
+        const u = currentUnions.find(un => un.partner_1_id === r.person_id || un.partner_2_id === r.person_id);
+        const spouseId = u ? (u.partner_1_id === r.person_id ? u.partner_2_id : u.partner_1_id) : null;
+        if (spouseId && hasParent.has(spouseId)) return;
+        treeHtml += renderFamilyUnit(r.person_id, currentPeopleMap, childrenMap, currentUnions, renderedPeople);
+    });
+    data.people.forEach(p => { if (!renderedPeople.has(p.person_id)) treeHtml += renderFamilyUnit(p.person_id, currentPeopleMap, childrenMap, currentUnions, renderedPeople); });
+    treeHtml += '</ul>';
+    document.getElementById('treeDiagram').innerHTML = data.people.length === 0 ? '<p>אין אנשים באילן.</p>' : treeHtml;
+}
+
+async function savePerson() {
+    const isDeceased = document.getElementById('isDeceased').checked;
+    const body = {
+        first_name: document.getElementById('firstName').value, last_name: document.getElementById('lastName').value,
+        maiden_name: document.getElementById('maidenName').value, gender: document.getElementById('gender').value,
+        occupation: document.getElementById('occupation').value, birth_date_approx: document.getElementById('birthApprox').value,
+        birth_place: document.getElementById('birthPlace').value, is_living: !isDeceased,
+        death_type: isDeceased ? document.getElementById('deathType').value : 'regular',
+        death_date_approx: isDeceased ? document.getElementById('deathApprox').value : null,
+        link_1: document.getElementById('link1').value, link_2: document.getElementById('link2').value
+    };
+    if (!body.first_name) return alert('חובה להזין שם פרטי');
+    const url = editingPersonId ? '/api/individuals/' + editingPersonId : '/api/trees/' + currentTreeId + '/individuals';
+    const res = await fetch(url, { method: editingPersonId ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const savedPerson = await res.json();
+    if (pendingRelation && savedPerson.person_id) await applyRelationBetween(pendingRelation.type, pendingRelation.targetId, savedPerson.person_id);
+    cancelEdit(); loadTreeData();
+}
+
+document.getElementById('treeSelect').addEventListener('change', () => { cancelEdit(); loadTreeData(); });
+document.getElementById('btnCreateTree').addEventListener('click', createTree);
+document.getElementById('btnDeleteTree').addEventListener('click', deleteCurrentTree);
+document.getElementById('btnAddPerson').addEventListener('click', savePerson);
+document.getElementById('btnLinkExisting').addEventListener('click', linkExistingPerson);
+document.getElementById('btnCancelEdit').addEventListener('click', cancelEdit);
+loadTrees();
