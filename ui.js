@@ -55,7 +55,7 @@ function drawExactTree(peopleMap, relationships, unionsList) {
     const byGen = {};
     people.forEach(p => { const g = gen[p.person_id]; if (!byGen[g]) byGen[g] = []; byGen[g].push(p.person_id); });
 
-    const cardW = 170, cardH = 135, gapX = 65, gapY = 75;
+    const cardW = 170, cardH = 135, gapX = 75, gapY = 75;
     const pos = {};
     let maxW = 600;
 
@@ -85,25 +85,24 @@ function drawExactTree(peopleMap, relationships, unionsList) {
     Object.values(pos).forEach(p => { p.x += (maxW - p.rowW - 80) / 2; });
     const totalH = (Object.keys(byGen).length) * (cardH + gapY) + 40;
 
-    let svg = '<svg class="svg-lines" width="' + maxW + '" height="' + totalH + '">';
-    let ringsHtml = '';
+    let svg = '<svg class="svg-lines" width="' + maxW + '" height="' + totalH + '" style="z-index:3;">';
 
     unionsList.forEach(u => {
         const p1 = pos[u.partner_1_id], p2 = pos[u.partner_2_id];
         if (!p1 || !p2) return;
         const left = p1.x < p2.x ? p1 : p2;
         const right = p1.x < p2.x ? p2 : p1;
-        const x1 = left.x + cardW, x2 = right.x, y = left.y + cardH / 2;
+        const x1 = left.x + cardW;
+        const x2 = right.x;
+        const y = left.y + cardH / 2;
         const midX = (x1 + x2) / 2;
         const isDiv = u.union_status === 'divorced';
 
         if (isDiv) {
-            svg += '<line x1="' + x1 + '" y1="' + y + '" x2="' + x2 + '" y2="' + y + '" stroke="#000000" stroke-width="3" stroke-dasharray="7,6"/>';
-            svg += '<line x1="' + (midX - 5) + '" y1="' + (y + 8) + '" x2="' + (midX + 1) + '" y2="' + (y - 8) + '" stroke="#000000" stroke-width="2.5"/>';
-            svg += '<line x1="' + (midX + 1) + '" y1="' + (y + 8) + '" x2="' + (midX + 7) + '" y2="' + (y - 8) + '" stroke="#000000" stroke-width="2.5"/>';
+            svg += '<line x1="' + (x1 + 4) + '" y1="' + y + '" x2="' + (x2 - 4) + '" y2="' + y + '" stroke="#000000" stroke-width="3" stroke-dasharray="5,5"/>';
         } else {
             svg += '<line x1="' + x1 + '" y1="' + y + '" x2="' + x2 + '" y2="' + y + '" stroke="#000000" stroke-width="3"/>';
-            ringsHtml += '<div class="ring-icon" style="left:' + midX + 'px; top:' + (y - 16) + 'px;">💍</div>';
+            svg += '<text x="' + midX + '" y="' + (y - 8) + '" text-anchor="middle" font-size="16">💍</text>';
         }
     });
 
@@ -134,5 +133,5 @@ function drawExactTree(peopleMap, relationships, unionsList) {
 
     svg += '</svg>';
     let cardsHtml = people.map(p => buildPersonCardHTML(p, pos[p.person_id].x, pos[p.person_id].y)).join('');
-    return '<div class="svg-board" style="width:' + maxW + 'px; height:' + totalH + 'px;">' + svg + ringsHtml + cardsHtml + '</div>';
+    return '<div class="svg-board" style="width:' + maxW + 'px; height:' + totalH + 'px;">' + svg + cardsHtml + '</div>';
 }
