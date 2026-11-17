@@ -34,9 +34,9 @@ function startRelativeAdd(relType) {
 
     const labels = {
         spouse_married: '💍 הוספת/חיבור בן/בת זוג', spouse_divorced: '💔 הוספת/חיבור גרוש/ה',
-        father: '👨 הוספת/חיבור אבא', mother: '👩 הוספת/חיבור אמא',
-        brother: '👦 הוספת/חיבור אח', sister: '👧 הוספת/חיבור אחות',
-        son: '👶 הוספת/חיבור בן', daughter: '👧 הוספת/חיבור בת'
+        father: '👨 הוספת/חיבור אבא', mother: '👩 הוספת/חבר אמא',
+        brother: '👦 הוספת/חבר אח', sister: '👧 הוספת/חבר אחות',
+        son: '👶 הוספת/חבר בן', daughter: '👧 הוספת/חבר בת'
     };
     document.getElementById('formTitle').textContent = labels[relType] + ' עבור: ' + formatFullName(target);
     document.getElementById('btnAddPerson').textContent = '💾 שמור אדם חדש וחבר';
@@ -52,9 +52,27 @@ async function applyRelationBetween(relType, targetId, otherPersonId) {
         await fetch('/api/trees/' + currentTreeId + '/relationships', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ parent_id: targetId, child_id: otherPersonId }) });
     } else if (relType === 'brother' || relType === 'sister') {
         const parents = currentRelationships.filter(r => r.child_id === targetId).map(r => r.parent_id);
-        if (parents.length === 0) alert('לאדם זה עדיין לא הוגדרו הורים, ולכן לא ניתן לקשר אחים אוטומטית.');
-        for (const pid of parents) {
-            await fetch('/api/trees/' + currentTreeId + '/relationships', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ parent_id: pid, child_id: otherPersonId }) });
+        if (parents.length === 0) {
+            alert('לאדם זה עדיין לא הוגדרו הורים, ולכן לא ניתן לקשר אחים אוטומטית.');
+        } else if (parents.length === 1) {
+            await fetch('/api/trees/' + currentTreeId + '/relationships', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ parent_id: parents.at(0), child_id: otherPersonId }) });
+        } else {
+            const p1 = currentPeopleMap[parents.at(0)];
+            const p2 = currentPeopleMap[parents.at(1)];
+            const choice = prompt(
+                'למי מהורי ' + currentPeopleMap[targetId].first_name + ' לשייך את האח/ות החדשים?\n' +
+                'הקלידי 1 עבור: ' + formatFullName(p1) + '\n' +
+                'הקלידי 2 עבור: ' + formatFullName(p2) + '\n' +
+                'הקלידי 3 עבור: שניהם (אחים מלאים)', '3'
+            );
+            let selectedParents = [];
+            if (choice === '1') selectedParents = [parents.at(0)];
+            else if (choice === '2') selectedParents = [parents.at(1)];
+            else selectedParents = parents;
+
+            for (const pid of selectedParents) {
+                await fetch('/api/trees/' + currentTreeId + '/relationships', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ parent_id: pid, child_id: otherPersonId }) });
+            }
         }
     } else if (relType === 'spouse_married' || relType === 'spouse_divorced') {
         const status = relType === 'spouse_divorced' ? 'divorced' : 'married';
