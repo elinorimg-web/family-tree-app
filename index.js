@@ -20,7 +20,8 @@ pool.query(`
     ALTER TABLE individuals
     ADD COLUMN IF NOT EXISTS occupation VARCHAR(150),
     ADD COLUMN IF NOT EXISTS link_1 TEXT,
-    ADD COLUMN IF NOT EXISTS link_2 TEXT;
+    ADD COLUMN IF NOT EXISTS link_2 TEXT,
+    ADD COLUMN IF NOT EXISTS death_type VARCHAR(30) DEFAULT 'regular';
 `).catch(err => console.error(err));
 
 app.get('/api/trees', async (req, res) => {
@@ -48,9 +49,8 @@ app.post('/api/trees', async (req, res) => {
 });
 
 app.delete('/api/trees/:treeId', async (req, res) => {
-    const { treeId } = req.params;
     try {
-        await pool.query('DELETE FROM trees WHERE tree_id = $1', [treeId]);
+        await pool.query('DELETE FROM trees WHERE tree_id = $1', [req.params.treeId]);
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -60,19 +60,20 @@ app.get('/api/trees/:treeId/full', async (req, res) => {
     try {
         const people = await pool.query('SELECT * FROM individuals WHERE tree_id = $1 ORDER BY created_at ASC', [treeId]);
         const rels = await pool.query('SELECT * FROM parent_child_relationships WHERE tree_id = $1', [treeId]);
-        res.json({ people: people.rows, relationships: rels.rows });
+        const unions = await pool.query('SELECT * FROM unions WHERE tree_id = $1', [treeId]);
+        res.json({ people: people.rows, relationships: rels.rows, unions: unions.rows });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post('/api/trees/:treeId/individuals', async (req, res) => {
     const { treeId } = req.params;
-    const { first_name, last_name, maiden_name, gender, occupation, birth_date_approx, birth_place, is_living, death_date_approx, link_1, link_2 } = req.body;
+    const { first_name, last_name, maiden_name, gender, occupation, birth_date_approx, birth_place, is_living, death_type, death_date_approx, link_1, link_2 } = req.body;
     try {
         const result = await pool.query(
             `INSERT INTO individuals 
-            (tree_id, first_name, last_name, maiden_name, gender, occupation, birth_date_approx, birth_place, is_living, death_date_approx, link_1, link_2) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
-            [treeId, first_name, last_name, maiden_name || null, gender || 'unknown', occupation || null, birth_date_approx, birth_place, is_living !== false, death_date_approx || null, link_1 || null, link_2 || null]
+            (tree_id, first_name, last_name, maiden_name, gender, occupation, birth_date_approx, birth_place, is_living, death_type, death_date_approx, link_1, link_2) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
+            [treeId, first_name, last_name, maiden_name || null, gender || 'unknown', occupation || null, birth_date_approx, birth_place, is_living !== false, death_type || 'regular', death_date_approx || null, link_1 || null, link_2 || null]
         );
         res.json(result.rows.at(0));
     } catch (err) { res.status(500).json({ error: err.message }); }
@@ -80,23 +81,22 @@ app.post('/api/trees/:treeId/individuals', async (req, res) => {
 
 app.put('/api/individuals/:personId', async (req, res) => {
     const { personId } = req.params;
-    const { first_name, last_name, maiden_name, gender, occupation, birth_date_approx, birth_place, is_living, death_date_approx, link_1, link_2 } = req.body;
+    const { first_name, last_name, maiden_name, gender, occupation, birth_date_approx, birth_place, is_living, death_type, death_date_approx, link_1, link_2 } = req.body;
     try {
         const result = await pool.query(
             `UPDATE individuals SET 
             first_name=$1, last_name=$2, maiden_name=$3, gender=$4, occupation=$5, 
-            birth_date_approx=$6, birth_place=$7, is_living=$8, death_date_approx=$9, link_1=$10, link_2=$11
-            WHERE person_id=$12 RETURNING *`,
-            [first_name, last_name, maiden_name || null, gender || 'unknown', occupation || null, birth_date_approx, birth_place, is_living !== false, death_date_approx || null, link_1 || null, link_2 || null, personId]
+            birth_date_approx=$6, birth_place=$7, is_living=$8, death_type=$9, death_date_approx=$10, link_1=$11, link_2=$12
+            WHERE person_id=$13 RETURNING *`,
+            [first_name, last_name, maiden_name || null, gender || 'unknown', occupation || null, birth_date_approx, birth_place, is_living !== false, death_type || 'regular', death_date_approx || null, link_1 || null, link_2 || null, personId]
         );
         res.json(result.rows.at(0));
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.delete('/api/individuals/:personId', async (req, res) => {
-    const { personId } = req.params;
     try {
-        await pool.query('DELETE FROM individuals WHERE person_id = $1', [personId]);
+        await pool.query('DELETE FROM individuals WHERE person_id = $1', [req.params.personId]);
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -106,8 +106,20 @@ app.post('/api/trees/:treeId/relationships', async (req, res) => {
     const { parent_id, child_id } = req.body;
     try {
         const result = await pool.query(
-            'INSERT INTO parent_child_relationships (tree_id, parent_id, child_id) VALUES ($1, $2, $3) RETURNING *',
+            'INSERT INTO parent_child_relationships (tree_id, parent_id, child_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING RETURNING *',
             [treeId, parent_id, child_id]
+        );
+        res.json(result.rows.at(0) || { ok: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/trees/:treeId/unions', async (req, res) => {
+    const { treeId } = req.params;
+    const { partner_1_id, partner_2_id, union_status } = req.body;
+    try {
+        const result = await pool.query(
+            'INSERT INTO unions (tree_id, partner_1_id, partner_2_id, union_status) VALUES ($1, $2, $3, $4) RETURNING *',
+            [treeId, partner_1_id, partner_2_id, union_status || 'married']
         );
         res.json(result.rows.at(0));
     } catch (err) { res.status(500).json({ error: err.message }); }
