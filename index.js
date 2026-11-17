@@ -51,11 +51,13 @@ app.get('/api/trees/:treeId/full', async (req, res) => {
 
 app.post('/api/trees/:treeId/individuals', async (req, res) => {
     const { treeId } = req.params;
-    const { first_name, last_name, gender, birth_date_approx, birth_place } = req.body;
+    const { first_name, last_name, gender, birth_date_approx, birth_place, is_living, death_date_approx } = req.body;
     try {
         const result = await pool.query(
-            'INSERT INTO individuals (tree_id, first_name, last_name, gender, birth_date_approx, birth_place) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-            [treeId, first_name, last_name, gender || 'unknown', birth_date_approx, birth_place]
+            `INSERT INTO individuals 
+            (tree_id, first_name, last_name, gender, birth_date_approx, birth_place, is_living, death_date_approx) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+            [treeId, first_name, last_name, gender || 'unknown', birth_date_approx, birth_place, is_living !== false, death_date_approx || null]
         );
         res.json(result.rows.at(0));
     } catch (err) { res.status(500).json({ error: err.message }); }
