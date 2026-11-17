@@ -55,7 +55,7 @@ function drawExactTree(peopleMap, relationships, unionsList) {
     const byGen = {};
     people.forEach(p => { const g = gen[p.person_id]; if (!byGen[g]) byGen[g] = []; byGen[g].push(p.person_id); });
 
-    const cardW = 170, cardH = 135, gapX = 50, gapY = 75;
+    const cardW = 170, cardH = 135, gapX = 65, gapY = 75;
     const pos = {};
     let maxW = 600;
 
@@ -94,9 +94,17 @@ function drawExactTree(peopleMap, relationships, unionsList) {
         const left = p1.x < p2.x ? p1 : p2;
         const right = p1.x < p2.x ? p2 : p1;
         const x1 = left.x + cardW, x2 = right.x, y = left.y + cardH / 2;
+        const midX = (x1 + x2) / 2;
         const isDiv = u.union_status === 'divorced';
-        svg += '<line x1="' + x1 + '" y1="' + y + '" x2="' + x2 + '" y2="' + y + '" stroke="#1e293b" stroke-width="3"' + (isDiv ? ' stroke-dasharray="6,5"' : '') + '/>';
-        if (!isDiv) ringsHtml += '<div class="ring-icon" style="left:' + ((x1 + x2) / 2) + 'px; top:' + y + 'px;">💍</div>';
+
+        if (isDiv) {
+            svg += '<line x1="' + x1 + '" y1="' + y + '" x2="' + x2 + '" y2="' + y + '" stroke="#000000" stroke-width="3" stroke-dasharray="7,6"/>';
+            svg += '<line x1="' + (midX - 5) + '" y1="' + (y + 8) + '" x2="' + (midX + 1) + '" y2="' + (y - 8) + '" stroke="#000000" stroke-width="2.5"/>';
+            svg += '<line x1="' + (midX + 1) + '" y1="' + (y + 8) + '" x2="' + (midX + 7) + '" y2="' + (y - 8) + '" stroke="#000000" stroke-width="2.5"/>';
+        } else {
+            svg += '<line x1="' + x1 + '" y1="' + y + '" x2="' + x2 + '" y2="' + y + '" stroke="#000000" stroke-width="3"/>';
+            ringsHtml += '<div class="ring-icon" style="left:' + midX + 'px; top:' + (y - 16) + 'px;">💍</div>';
+        }
     });
 
     const parentsByChild = {};
