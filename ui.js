@@ -24,7 +24,7 @@ function buildPersonCardHTML(p, x, y) {
         '<button type="button" onclick="startEditPerson(\'' + p.person_id + '\')" style="padding:2px 6px;font-size:10px;background:#475569;">✏️ ערוך</button>' +
         '<button type="button" onclick="deletePerson(\'' + p.person_id + '\')" style="padding:2px 6px;font-size:10px;background:#dc2626;">🗑️ מחק</button></div>';
 
-    return '<div oncontextmenu="openContextMenu(event, \'' + p.person_id + '\')" class="node-card ' + (p.gender === 'female' ? 'female' : '') + ' ' + statusClass + '" style="left:' + x + 'px; top:' + y + 'px;">' +
+    return '<div oncontextmenu="openContextMenu(event, \'' + p.person_id + '\')" class="node-card ' + (p.gender === 'female' ? 'female' : '') + ' ' + statusClass + '" style="left:' + x + 'px; top:' + y + 'px; z-index:2;">' +
         '<div class="node-name">' + formatFullName(p) + suffix + '</div>' +
         (p.occupation ? '<div class="node-occ">' + p.occupation + '</div>' : '') +
         (dates || p.birth_place ? '<div class="node-dates">' + dates + (p.birth_place ? ' (' + p.birth_place + ')' : '') + '</div>' : '') +
@@ -55,7 +55,7 @@ function drawExactTree(peopleMap, relationships, unionsList) {
     const byGen = {};
     people.forEach(p => { const g = gen[p.person_id]; if (!byGen[g]) byGen[g] = []; byGen[g].push(p.person_id); });
 
-    const cardW = 170, cardH = 135, gapX = 75, gapY = 75;
+    const cardW = 170, cardH = 135, gapX = 80, gapY = 75;
     const pos = {};
     let maxW = 600;
 
@@ -64,12 +64,20 @@ function drawExactTree(peopleMap, relationships, unionsList) {
         const ordered = [];
         const placed = new Set();
 
-        ids.forEach(id => {
+        // קודם ממקמים אנשים שיש להם גם נישואין וגם גירושין כדי שהאדם יהיה במרכז
+        const sortedIds = [...ids].sort((a, b) => {
+            const countA = unionsList.filter(u => u.partner_1_id === a || u.partner_2_id === a).length;
+            const countB = unionsList.filter(u => u.partner_1_id === b || u.partner_2_id === b).length;
+            return countB - countA;
+        });
+
+        sortedIds.forEach(id => {
             if (placed.has(id)) return;
             const myUnions = unionsList.filter(u => u.partner_1_id === id || u.partner_2_id === id);
             const divorced = myUnions.filter(u => u.union_status === 'divorced').map(u => u.partner_1_id === id ? u.partner_2_id : u.partner_1_id);
             const married = myUnions.filter(u => u.union_status !== 'divorced').map(u => u.partner_1_id === id ? u.partner_2_id : u.partner_1_id);
 
+            // גרושים משמאל, האדם במרכז, נשואים מיד מימין (ללא חציצה)
             divorced.forEach(did => { if (ids.includes(did) && !placed.has(did)) { ordered.push(did); placed.add(did); } });
             ordered.push(id); placed.add(id);
             married.forEach(mid => { if (ids.includes(mid) && !placed.has(mid)) { ordered.push(mid); placed.add(mid); } });
@@ -85,7 +93,7 @@ function drawExactTree(peopleMap, relationships, unionsList) {
     Object.values(pos).forEach(p => { p.x += (maxW - p.rowW - 80) / 2; });
     const totalH = (Object.keys(byGen).length) * (cardH + gapY) + 40;
 
-    let svg = '<svg class="svg-lines" width="' + maxW + '" height="' + totalH + '" style="z-index:3;">';
+    let svg = '<svg class="svg-lines" width="' + maxW + '" height="' + totalH + '" style="z-index:1;">';
 
     unionsList.forEach(u => {
         const p1 = pos[u.partner_1_id], p2 = pos[u.partner_2_id];
@@ -99,10 +107,10 @@ function drawExactTree(peopleMap, relationships, unionsList) {
         const isDiv = u.union_status === 'divorced';
 
         if (isDiv) {
-            svg += '<line x1="' + (x1 + 4) + '" y1="' + y + '" x2="' + (x2 - 4) + '" y2="' + y + '" stroke="#000000" stroke-width="3" stroke-dasharray="5,5"/>';
+            svg += '<line x1="' + (x1 + 6) + '" y1="' + y + '" x2="' + (x2 - 6) + '" y2="' + y + '" stroke="#000000" stroke-width="3" stroke-dasharray="6,6"/>';
         } else {
             svg += '<line x1="' + x1 + '" y1="' + y + '" x2="' + x2 + '" y2="' + y + '" stroke="#000000" stroke-width="3"/>';
-            svg += '<text x="' + midX + '" y="' + (y - 8) + '" text-anchor="middle" font-size="16">💍</text>';
+            svg += '<text x="' + midX + '" y="' + (y - 10) + '" text-anchor="middle" font-size="16">💍</text>';
         }
     });
 
