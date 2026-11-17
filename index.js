@@ -22,13 +22,16 @@ pool.query(`
     ADD COLUMN IF NOT EXISTS link_1 TEXT,
     ADD COLUMN IF NOT EXISTS link_2 TEXT,
     ADD COLUMN IF NOT EXISTS death_type VARCHAR(30) DEFAULT 'regular';
-`).catch(err => console.error(err));
 
-app.get('/api/trees', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT * FROM trees ORDER BY created_at DESC');
-        res.json(result.rows);
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    CREATE TABLE IF NOT EXISTS unions (
+        union_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tree_id UUID REFERENCES trees(tree_id) ON DELETE CASCADE,
+        partner_1_id UUID REFERENCES individuals(person_id) ON DELETE CASCADE,
+        partner_2_id UUID REFERENCES individuals(person_id) ON DELETE CASCADE,
+        union_status VARCHAR(30) DEFAULT 'married',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+`).catch(err => console.error(err));
 });
 
 app.post('/api/trees', async (req, res) => {
