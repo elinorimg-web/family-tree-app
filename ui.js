@@ -35,7 +35,6 @@ function drawExactTree(peopleMap, relationships, unionsList) {
     const people = Object.values(peopleMap);
     if (people.length === 0) return '<p style="direction:rtl;">אין אנשים באילן.</p>';
 
-    // 1. חישוב דור לכל אדם
     const gen = {};
     people.forEach(p => gen[p.person_id] = 0);
     for (let step = 0; step < people.length + 2; step++) {
@@ -53,11 +52,10 @@ function drawExactTree(peopleMap, relationships, unionsList) {
         });
     }
 
-    // 2. קיבוץ לפי דורות וסידור בני זוג זה ליד זה
     const byGen = {};
     people.forEach(p => { const g = gen[p.person_id]; if (!byGen[g]) byGen[g] = []; byGen[g].push(p.person_id); });
 
-    const cardW = 170, cardH = 125, gapX = 50, gapY = 75;
+    const cardW = 170, cardH = 135, gapX = 50, gapY = 75;
     const pos = {};
     let maxW = 600;
 
@@ -69,7 +67,6 @@ function drawExactTree(peopleMap, relationships, unionsList) {
         ids.forEach(id => {
             if (placed.has(id)) return;
             const myUnions = unionsList.filter(u => u.partner_1_id === id || u.partner_2_id === id);
-            // הצבת גרוש משמאל, אדם במרכז, ובן/בת זוג נוכחיים מימין
             const divorced = myUnions.filter(u => u.union_status === 'divorced').map(u => u.partner_1_id === id ? u.partner_2_id : u.partner_1_id);
             const married = myUnions.filter(u => u.union_status !== 'divorced').map(u => u.partner_1_id === id ? u.partner_2_id : u.partner_1_id);
 
@@ -85,14 +82,12 @@ function drawExactTree(peopleMap, relationships, unionsList) {
         });
     });
 
-    // מרכוז כל שורה ביחס לרוחב המקסימלי
     Object.values(pos).forEach(p => { p.x += (maxW - p.rowW - 80) / 2; });
     const totalH = (Object.keys(byGen).length) * (cardH + gapY) + 40;
 
     let svg = '<svg class="svg-lines" width="' + maxW + '" height="' + totalH + '">';
     let ringsHtml = '';
 
-    // 3. ציור קווי זוגיות (מלא לנישואין, מקווקו לגירושין)
     unionsList.forEach(u => {
         const p1 = pos[u.partner_1_id], p2 = pos[u.partner_2_id];
         if (!p1 || !p2) return;
@@ -104,7 +99,6 @@ function drawExactTree(peopleMap, relationships, unionsList) {
         if (!isDiv) ringsHtml += '<div class="ring-icon" style="left:' + ((x1 + x2) / 2) + 'px; top:' + y + 'px;">💍</div>';
     });
 
-    // 4. ציור קווי הורה-ילד (יוצא ממרכז הזוג אם יש שני הורים, או מהורה בודד, ויורד בדיוק למרכז הילד!)
     const parentsByChild = {};
     relationships.forEach(r => { if (!parentsByChild[r.child_id]) parentsByChild[r.child_id] = []; parentsByChild[r.child_id].push(r.parent_id); });
 
@@ -116,11 +110,11 @@ function drawExactTree(peopleMap, relationships, unionsList) {
 
         let startX, startY;
         if (pIds.length >= 2) {
-            const p1 = pos[pIds], p2 = pos[pIds];
+            const p1 = pos[pIds.at(0)], p2 = pos[pIds.at(1)];
             startX = (p1.x + p2.x + cardW) / 2;
             startY = p1.y + cardH / 2;
         } else {
-            const p1 = pos[pIds];
+            const p1 = pos[pIds.at(0)];
             startX = p1.x + cardW / 2;
             startY = p1.y + cardH;
         }
