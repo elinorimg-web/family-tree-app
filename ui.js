@@ -6,6 +6,14 @@ function formatFullName(p) {
     return [lastNames, p.first_name].filter(Boolean).join(' ').trim();
 }
 
+function showBio(personId) {
+    const p = currentPeopleMap[personId];
+    if (!p) return;
+    document.getElementById('bioTitle').textContent = '📖 סיפור חיים: ' + formatFullName(p);
+    document.getElementById('bioContent').textContent = p.notes || '';
+    document.getElementById('bioModal').style.display = 'flex';
+}
+
 function buildPersonCardHTML(p, x, y) {
     const isDeceased = p.is_living === false;
     let statusClass = '';
@@ -20,7 +28,9 @@ function buildPersonCardHTML(p, x, y) {
     let linksHtml = '';
     if (p.link_1) linksHtml += '<a href="' + p.link_1 + '" target="_blank" class="ext-link">🔗 קישור 1</a>';
     if (p.link_2) linksHtml += '<a href="' + p.link_2 + '" target="_blank" class="ext-link">🔗 קישור 2</a>';
-    const actionsHtml = '<div style="margin-top:6px;border-top:1px solid #cbd5e1;padding-top:4px;display:flex;justify-content:center;gap:6px;">' +
+    if (p.notes) linksHtml += '<button type="button" onclick="showBio(\'' + p.person_id + '\')" class="ext-link no-print" style="background:#fef3c7; color:#92400e;">📖 סיפור חיים</button>';
+
+    const actionsHtml = '<div class="card-actions" style="margin-top:6px;border-top:1px solid #cbd5e1;padding-top:4px;display:flex;justify-content:center;gap:6px;">' +
         '<button type="button" onclick="startEditPerson(\'' + p.person_id + '\')" style="padding:2px 6px;font-size:10px;background:#475569;">✏️ ערוך</button>' +
         '<button type="button" onclick="deletePerson(\'' + p.person_id + '\')" style="padding:2px 6px;font-size:10px;background:#dc2626;">🗑️ מחק</button></div>';
 
@@ -55,7 +65,7 @@ function drawExactTree(peopleMap, relationships, unionsList) {
     const byGen = {};
     people.forEach(p => { const g = gen[p.person_id]; if (!byGen[g]) byGen[g] = []; byGen[g].push(p.person_id); });
 
-    const cardW = 170, cardH = 135, gapX = 80, gapY = 75;
+    const cardW = 170, cardH = 145, gapX = 80, gapY = 75;
     const pos = {};
     let maxW = 600;
 
@@ -64,7 +74,6 @@ function drawExactTree(peopleMap, relationships, unionsList) {
         const ordered = [];
         const placed = new Set();
 
-        // קודם ממקמים אנשים שיש להם גם נישואין וגם גירושין כדי שהאדם יהיה במרכז
         const sortedIds = [...ids].sort((a, b) => {
             const countA = unionsList.filter(u => u.partner_1_id === a || u.partner_2_id === a).length;
             const countB = unionsList.filter(u => u.partner_1_id === b || u.partner_2_id === b).length;
@@ -77,7 +86,6 @@ function drawExactTree(peopleMap, relationships, unionsList) {
             const divorced = myUnions.filter(u => u.union_status === 'divorced').map(u => u.partner_1_id === id ? u.partner_2_id : u.partner_1_id);
             const married = myUnions.filter(u => u.union_status !== 'divorced').map(u => u.partner_1_id === id ? u.partner_2_id : u.partner_1_id);
 
-            // גרושים משמאל, האדם במרכז, נשואים מיד מימין (ללא חציצה)
             divorced.forEach(did => { if (ids.includes(did) && !placed.has(did)) { ordered.push(did); placed.add(did); } });
             ordered.push(id); placed.add(id);
             married.forEach(mid => { if (ids.includes(mid) && !placed.has(mid)) { ordered.push(mid); placed.add(mid); } });
