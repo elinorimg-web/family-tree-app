@@ -10,19 +10,23 @@ button:hover { background: #1e40af; }
 .checkbox-row input { width: 17px; height: 17px; cursor: pointer; }
 .tree-canvas { overflow-x: auto; padding: 25px 20px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; text-align: center; }
 
-/* מבנה עץ ממורכז במדויק */
+/* מבנה עץ עם מרווח ברור של חצי סנטימטר (24px) מעל כל כרטיס */
 .tree ul { padding-top: 24px; position: relative; display: flex; justify-content: center; align-items: flex-start; padding-right: 0; margin: 0 auto; }
 .tree > ul { padding-top: 0; }
 .tree li { list-style-type: none; text-align: center; position: relative; padding: 24px 12px 0 12px; display: flex; flex-direction: column; align-items: center; }
 .tree > ul > li { padding-top: 0; }
+
+/* קווי החיבור האופקיים והאנכיים מעל הילדים */
 .tree li::before, .tree li::after { content: ''; position: absolute; top: 0; left: 50%; border-top: 2px solid #475569; width: 50%; height: 24px; }
 .tree li::after { right: 50%; left: auto; border-right: 2px solid #475569; }
-.tree li:only-child::after, .tree li:only-child::before { display: none; }
+.tree li:only-child::after { content: ''; position: absolute; top: 0; left: 50%; border-right: 2px solid #475569; border-top: none; width: 0; height: 24px; transform: translateX(-50%); display: block; }
+.tree li:only-child::before { display: none; }
+.tree > ul > li::before, .tree > ul > li::after, .tree > ul > li:only-child::after { display: none !important; }
 .tree li:first-child::before, .tree li:last-child::after { border: 0 none; }
 .tree li:last-child::before { border-right: 2px solid #475569; border-radius: 0 5px 0 0; }
 .tree li:first-child::after { border-radius: 5px 0 0 0; }
 
-/* קו אנכי מתחת לזוג/הורה מופיע רק כשיש ילדים */
+/* קו אנכי שיורד ממרכז הזוג/ההורה מופיע רק כשיש ילדים */
 .tree ul.has-children::before { content: ''; position: absolute; top: 0; left: 50%; border-left: 3px solid #1e293b; width: 0; height: 24px; transform: translateX(-50%); }
 
 /* זוגות נשואים / גרושים מאוחדים */
