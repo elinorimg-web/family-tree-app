@@ -66,6 +66,7 @@ function startEditPerson(personId) {
     document.getElementById('deathApprox').value = p.death_date_approx || '';
     document.getElementById('link1').value = p.link_1 || '';
     document.getElementById('link2').value = p.link_2 || '';
+    document.getElementById('personNotes').value = p.notes || '';
     document.getElementById('formTitle').textContent = '✏️ עריכת: ' + formatFullName(p);
     document.getElementById('btnAddPerson').textContent = '💾 שמור שינויים';
     document.getElementById('btnAddPerson').style.background = '#059669';
@@ -76,7 +77,7 @@ function startEditPerson(personId) {
 function cancelEdit() {
     editingPersonId = null; pendingRelation = null;
     document.getElementById('existingPersonBox').style.display = 'none';
-    ['firstName','lastName','maidenName','occupation','birthApprox','birthPlace','link1','link2','deathApprox'].forEach(id => document.getElementById(id).value = '');
+    ['firstName','lastName','maidenName','occupation','birthApprox','birthPlace','link1','link2','deathApprox','personNotes'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('isDeceased').checked = false;
     document.getElementById('deathType').value = 'regular';
     document.getElementById('deathFieldContainer').style.display = 'none';
@@ -95,11 +96,14 @@ async function deletePerson(personId) {
 }
 
 async function loadTreeData() {
-    currentTreeId = document.getElementById('treeSelect').value;
+    const select = document.getElementById('treeSelect');
+    currentTreeId = select.value;
     const deleteBtn = document.getElementById('btnDeleteTree');
     if (!currentTreeId) { document.getElementById('workspace').style.display = 'none'; deleteBtn.style.display = 'none'; return; }
     document.getElementById('workspace').style.display = 'block';
     deleteBtn.style.display = 'inline-block';
+    document.getElementById('printTreeTitle').textContent = '🌳 אילן יוחסין: ' + select.options[select.selectedIndex].text;
+
     const res = await fetch('/api/trees/' + currentTreeId + '/full');
     const data = await res.json();
     currentPeopleMap = {};
@@ -118,7 +122,8 @@ async function savePerson() {
         birth_place: document.getElementById('birthPlace').value, is_living: !isDeceased,
         death_type: isDeceased ? document.getElementById('deathType').value : 'regular',
         death_date_approx: isDeceased ? document.getElementById('deathApprox').value : null,
-        link_1: document.getElementById('link1').value, link_2: document.getElementById('link2').value
+        link_1: document.getElementById('link1').value, link_2: document.getElementById('link2').value,
+        notes: document.getElementById('personNotes').value
     };
     if (!body.first_name) return alert('חובה להזין שם פרטי');
     const url = editingPersonId ? '/api/individuals/' + editingPersonId : '/api/trees/' + currentTreeId + '/individuals';
