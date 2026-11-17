@@ -1,11 +1,45 @@
 let currentTreeId = null;
 let editingPersonId = null;
 let currentPeopleMap = {};
+let currentRelationships = [];
+let contextTargetPersonId = null;
+let pendingRelation = null;
+
+document.addEventListener('click', () => { document.getElementById('contextMenu').style.display = 'none'; });
 
 document.getElementById('isDeceased').addEventListener('change', function() {
     document.getElementById('deathFieldContainer').style.display = this.checked ? 'block' : 'none';
     if (!this.checked) document.getElementById('deathApprox').value = '';
 });
+
+function openContextMenu(e, personId) {
+    e.preventDefault();
+    contextTargetPersonId = personId;
+    const p = currentPeopleMap[personId];
+    document.getElementById('ctxHeader').textContent = 'קרובים עבור: ' + (p ? p.first_name : '');
+    const menu = document.getElementById('contextMenu');
+    menu.style.display = 'block';
+    menu.style.left = e.clientX + 'px';
+    menu.style.top = e.clientY + 'px';
+}
+
+function startRelativeAdd(relType) {
+    const target = currentPeopleMap[contextTargetPersonId];
+    if (!target) return;
+    cancelEdit();
+    pendingRelation = { type: relType, targetId: contextTargetPersonId };
+
+    const isMale = ['father', 'brother', 'son'].includes(relType);
+    document.getElementById('gender').value = isMale ? 'male' : 'female';
+    if (target.last_name && relType !== 'mother') document.getElementById('lastName').value = target.last_name;
+
+    const labels = { father: '👨 הוספת אבא', mother: '👩 הוספת אמא', brother: '👦 הוספת אח', sister: '👧 הוספת אחות', son: '👶 הוספת בן', daughter: '👧 הוספת בת' };
+    document.getElementById('formTitle').textContent = labels[relType] + ' עבור: ' + formatFullName(target);
+    document.getElementById('btnAddPerson').textContent = '💾 שמור וחבר לעץ';
+    document.getElementById('btnAddPerson').style.background = '#059669';
+    document.getElementById('btnCancelEdit').style.display = 'inline-block';
+    document.getElementById('personFormBox').scrollIntoView({ behavior: 'smooth' });
+}
 
 async function loadTrees() {
     const res = await fetch('/api/trees');
@@ -48,6 +82,7 @@ async function deleteCurrentTree() {
 function startEditPerson(personId) {
     const p = currentPeopleMap[personId];
     if (!p) return;
+    cancelEdit();
     editingPersonId = personId;
     document.getElementById('firstName').value = p.first_name || '';
     document.getElementById('lastName').value = p.last_name || '';
@@ -71,6 +106,7 @@ function startEditPerson(personId) {
 
 function cancelEdit() {
     editingPersonId = null;
+    pendingRelation = null;
     ['firstName','lastName','maidenName','occupation','birthApprox','birthPlace','link1','link2','deathApprox'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('isDeceased').checked = false;
     document.getElementById('deathFieldContainer').style.display = 'none';
@@ -96,22 +132,21 @@ async function loadTreeData() {
     deleteBtn.style.display = 'inline-block';
     const res = await fetch('/api/trees/' + currentTreeId + '/full');
     const data = await res.json();
-    const pSel = document.getElementById('parentSelect');
-    const cSel = document.getElementById('childSelect');
-    pSel.innerHTML = ''; cSel.innerHTML = '';
     currentPeopleMap = {};
+    currentRelationships = data.relationships;
     const childrenMap = {};
     const hasParent = new Set();
-    data.people.forEach(p => {
-        currentPeopleMap[p.person_id] = p;
-        childrenMap[p.person_id] = [];
-        const optHtml = '<option value="' + p.person_id + '">' + formatFullName(p) + '</option>';
-        pSel.innerHTML += optHtml; cSel.innerHTML += optHtml;
-    });
+    data.people.forEach(p => { currentPeopleMap[p.person_id] = p; childrenMap[p.person_id] = []; });
     data.relationships.forEach(r => { if (childrenMap[r.parent_id]) { childrenMap[r.parent_id].push(r.child_id); hasParent.add(r.child_id); } });
     const roots = data.people.filter(p => !hasParent.has(p.person_id));
     document.getElementById('treeDiagram').innerHTML = data.people.length === 0 ? '<p>אין אנשים באילן.</p>' :
         '<ul>' + roots.map(r => renderTreeRecursive(r.person_id, currentPeopleMap, childrenMap)).join('') + '</ul>';
+}
+
+async function linkParentChild(parent_id, child_id) {
+    await fetch('/api/trees/' + currentTreeId + '/relationships', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ parent_id, child_id })
+    });
 }
 
 async function savePerson() {
@@ -126,18 +161,22 @@ async function savePerson() {
     };
     if (!body.first_name) return alert('חובה להזין שם פרטי');
     const url = editingPersonId ? '/api/individuals/' + editingPersonId : '/api/trees/' + currentTreeId + '/individuals';
-    await fetch(url, { method: editingPersonId ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    cancelEdit(); loadTreeData();
-}
+    const res = await fetch(url, { method: editingPersonId ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const savedPerson = await res.json();
 
-async function addRelationship() {
-    const parent_id = document.getElementById('parentSelect').value;
-    const child_id = document.getElementById('childSelect').value;
-    if (parent_id === child_id) return alert('אדם לא יכול להיות הורה של עצמו');
-    await fetch('/api/trees/' + currentTreeId + '/relationships', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ parent_id, child_id })
-    });
-    loadTreeData();
+    if (pendingRelation && savedPerson.person_id) {
+        const { type, targetId } = pendingRelation;
+        if (type === 'father' || type === 'mother') {
+            await linkParentChild(savedPerson.person_id, targetId);
+        } else if (type === 'son' || type === 'daughter') {
+            await linkParentChild(targetId, savedPerson.person_id);
+        } else if (type === 'brother' || type === 'sister') {
+            const parents = currentRelationships.filter(r => r.child_id === targetId).map(r => r.parent_id);
+            if (parents.length === 0) alert('לתשומת לבך: לאדם זה עדיין לא מוגדרים הורים, ולכן האח/ות נוספו ללא הורה משותף. הוסיפי להם אבא או אמא והם יתחברו.');
+            for (const pid of parents) await linkParentChild(pid, savedPerson.person_id);
+        }
+    }
+    cancelEdit(); loadTreeData();
 }
 
 document.getElementById('treeSelect').addEventListener('change', () => { cancelEdit(); loadTreeData(); });
@@ -145,5 +184,4 @@ document.getElementById('btnCreateTree').addEventListener('click', createTree);
 document.getElementById('btnDeleteTree').addEventListener('click', deleteCurrentTree);
 document.getElementById('btnAddPerson').addEventListener('click', savePerson);
 document.getElementById('btnCancelEdit').addEventListener('click', cancelEdit);
-document.getElementById('btnAddRel').addEventListener('click', addRelationship);
 loadTrees();
