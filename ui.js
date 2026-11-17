@@ -37,32 +37,75 @@ function renderFamilyUnit(personId, peopleMap, childrenMap, unionsList, rendered
     const person = peopleMap[personId];
 
     const myUnions = unionsList.filter(u => u.partner_1_id === personId || u.partner_2_id === personId);
-    let nodeHtml = '';
-    const allChildren = new Set(childrenMap[personId] || []);
+    const marriedUnion = myUnions.find(u => u.union_status !== 'divorced') || myUnions[0];
+    const otherUnions = myUnions.filter(u => u !== marriedUnion);
 
-    if (myUnions.length > 0) {
-        nodeHtml += '<div class="couple-wrap">' + buildPersonCardHTML(person);
-        myUnions.forEach(u => {
-            const spouseId = u.partner_1_id === personId ? u.partner_2_id : u.partner_1_id;
-            const spouse = peopleMap[spouseId];
-            if (spouse) {
-                renderedPeople.add(spouseId);
-                (childrenMap[spouseId] || []).forEach(c => allChildren.add(c));
-                const isDivorced = u.union_status === 'divorced';
-                const badgeHtml = isDivorced ? '' : '<span class="spouse-badge">💍</span>';
-                nodeHtml += '<div class="spouse-line ' + (isDivorced ? 'divorced' : '') + '">' + badgeHtml + '</div>' +
-                    buildPersonCardHTML(spouse);
-            }
-        });
-        nodeHtml += '</div>';
-    } else {
-        nodeHtml = buildPersonCardHTML(person);
+    const personChildren = childrenMap[personId] || [];
+    let primarySpouse = null;
+    let sharedChildren = [];
+    let personOnlyChildren = [...personChildren];
+    let spouseOnlyChildren = [];
+
+    if (marriedUnion) {
+        const spouseId = marriedUnion.partner_1_id === personId ? marriedUnion.partner_2_id : marriedUnion.partner_1_id;
+        primarySpouse = peopleMap[spouseId];
+        if (primarySpouse) {
+            renderedPeople.add(spouseId);
+            const spouseChildren = childrenMap[spouseId] || [];
+            sharedChildren = personChildren.filter(cid => spouseChildren.includes(cid));
+            personOnlyChildren = personChildren.filter(cid => !sharedChildren.includes(cid));
+            spouseOnlyChildren = spouseChildren.filter(cid => !sharedChildren.includes(cid));
+        }
     }
 
-    const childrenArr = Array.from(allChildren).filter(cid => peopleMap[cid] && !renderedPeople.has(cid));
-    let html = '<li>' + nodeHtml;
-    if (childrenArr.length > 0) {
-        html += '<ul class="has-children">' + childrenArr.map(cid => renderFamilyUnit(cid, peopleMap, childrenMap, unionsList, renderedPeople)).join('') + '</ul>';
+    let topHtml = '';
+    if (primarySpouse) {
+        const isDivorced = marriedUnion.union_status === 'divorced';
+        const badgeHtml = isDivorced ? '' : '<span class="spouse-badge">💍</span>';
+
+        let personCol = '<div style="display:flex; flex-direction:column; align-items:center;">' + buildPersonCardHTML(person);
+        if (personOnlyChildren.length > 0) {
+            personCol += '<ul class="has-children">' + personOnlyChildren.map(cid => renderFamilyUnit(cid, peopleMap, childrenMap, unionsList, renderedPeople)).join('') + '</ul>';
+        }
+        personCol += '</div>';
+
+        let spouseCol = '<div style="display:flex; flex-direction:column; align-items:center;">' + buildPersonCardHTML(primarySpouse);
+        if (spouseOnlyChildren.length > 0) {
+            spouseCol += '<ul class="has-children">' + spouseOnlyChildren.map(cid => renderFamilyUnit(cid, peopleMap, childrenMap, unionsList, renderedPeople)).join('') + '</ul>';
+        }
+        spouseCol += '</div>';
+
+        topHtml = '<div class="couple-wrap" style="align-items:flex-start;">' + personCol +
+            '<div class="spouse-line ' + (isDivorced ? 'divorced' : '') + '" style="margin-top:42px;">' + badgeHtml + '</div>' +
+            spouseCol + '</div>';
+    } else {
+        topHtml = buildPersonCardHTML(person);
+        sharedChildren = personOnlyChildren;
+    }
+
+    // הצגת בני זוג נוספים (גירושין קודמים) לצד היחידה
+    let extraSpousesHtml = '';
+    otherUnions.forEach(u => {
+        const exId = u.partner_1_id === personId ? u.partner_2_id : u.partner_1_id;
+        const exSpouse = peopleMap[exId];
+        if (exSpouse && !renderedPeople.has(exId)) {
+            renderedPeople.add(exId);
+            const exChildren = (childrenMap[exId] || []).filter(cid => !sharedChildren.includes(cid) && !personOnlyChildren.includes(cid));
+            extraSpousesHtml += '<div class="spouse-line divorced" style="margin-top:42px;"></div>' +
+                '<div style="display:flex; flex-direction:column; align-items:center;">' + buildPersonCardHTML(exSpouse) +
+                (exChildren.length > 0 ? '<ul class="has-children">' + exChildren.map(cid => renderFamilyUnit(cid, peopleMap, childrenMap, unionsList, renderedPeople)).join('') + '</ul>' : '') +
+                '</div>';
+        }
+    });
+
+    if (extraSpousesHtml) {
+        topHtml = '<div style="display:inline-flex; align-items:flex-start; gap:4px;">' + topHtml + extraSpousesHtml + '</div>';
+    }
+
+    const validShared = sharedChildren.filter(cid => peopleMap[cid] && !renderedPeople.has(cid));
+    let html = '<li>' + topHtml;
+    if (validShared.length > 0) {
+        html += '<ul class="has-children">' + validShared.map(cid => renderFamilyUnit(cid, peopleMap, childrenMap, unionsList, renderedPeople)).join('') + '</ul>';
     }
     return html + '</li>';
 }
