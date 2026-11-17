@@ -36,7 +36,6 @@ function renderFamilyUnit(personId, peopleMap, childrenMap, unionsList, rendered
     renderedPeople.add(personId);
     const person = peopleMap[personId];
 
-    // איתור בני/בנות זוג
     const myUnions = unionsList.filter(u => u.partner_1_id === personId || u.partner_2_id === personId);
     let nodeHtml = '';
     const allChildren = new Set(childrenMap[personId] || []);
