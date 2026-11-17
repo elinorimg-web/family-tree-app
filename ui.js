@@ -71,7 +71,7 @@ function drawExactTree(peopleMap, relationships, unionsList) {
         if (!parentsByChild[r.child_id].includes(r.parent_id)) parentsByChild[r.child_id].push(r.parent_id);
     });
 
-    const cardW = 170, cardH = 145, gapX = 80, gapY = 105;
+    const cardW = 170, cardH = 145, gapX = 80, gapY = 115;
     const pos = {};
     let maxW = 600;
     const globalPlaced = new Set();
@@ -141,20 +141,22 @@ function drawExactTree(peopleMap, relationships, unionsList) {
         }
     });
 
-    const parentGroupLevels = {};
-    let groupCounter = 0;
-
+    // קיבוץ ילדים לפי ההורים המדויקים שלהם + צבע מובחן לכל קבוצת הורים
+    const familyGroups = {};
     Object.keys(parentsByChild).forEach(childId => {
-        const cPos = pos[childId];
-        if (!cPos) return;
+        if (!pos[childId]) return;
         const pIds = parentsByChild[childId].filter(pid => pos[pid]).sort();
         if (pIds.length === 0) return;
+        const key = pIds.join('_');
+        if (!familyGroups[key]) familyGroups[key] = { pIds, children: [] };
+        familyGroups[key].children.push(childId);
+    });
 
-        const groupKey = pIds.join('_');
-        if (parentGroupLevels[groupKey] === undefined) {
-            parentGroupLevels[groupKey] = groupCounter++;
-        }
-        const levelOffset = (parentGroupLevels[groupKey] % 5) * 14;
+    const branchColors = ['#1e3a8a', '#065f46', '#7c2d12', '#581c87', '#0f766e'];
+    Object.values(familyGroups).forEach((group, idx) => {
+        const color = branchColors[idx % branchColors.length];
+        const levelOffset = (idx % 5) * 14;
+        const pIds = group.pIds;
 
         let startX, startY;
         if (pIds.length >= 2) {
@@ -166,10 +168,20 @@ function drawExactTree(peopleMap, relationships, unionsList) {
             startX = p1.x + cardW / 2;
             startY = p1.y + cardH;
         }
-        const endX = cPos.x + cardW / 2;
-        const endY = cPos.y;
-        const midY = (pIds.length >= 2 ? (pos[pIds.at(0)].y + cardH) : startY) + 18 + levelOffset;
-        svg += '<path d="M ' + startX + ' ' + startY + ' L ' + startX + ' ' + midY + ' L ' + endX + ' ' + midY + ' L ' + endX + ' ' + endY + '" fill="none" stroke="#475569" stroke-width="2.5"/>';
+
+        const baseBottomY = pIds.length >= 2 ? (pos[pIds.at(0)].y + cardH) : startY;
+        const midY = baseBottomY + 18 + levelOffset;
+
+        // קו אנכי מהורה/זוג לנקודת הפיצול + עיגול פיצול ברור
+        svg += '<line x1="' + startX + '" y1="' + startY + '" x2="' + startX + '" y2="' + midY + '" stroke="' + color + '" stroke-width="2.5"/>';
+        svg += '<circle cx="' + startX + '" cy="' + midY + '" r="4" fill="' + color + '"/>';
+
+        group.children.forEach(childId => {
+            const cPos = pos[childId];
+            const endX = cPos.x + cardW / 2;
+            const endY = cPos.y;
+            svg += '<path d="M ' + startX + ' ' + midY + ' L ' + endX + ' ' + midY + ' L ' + endX + ' ' + endY + '" fill="none" stroke="' + color + '" stroke-width="2.5"/>';
+        });
     });
 
     svg += '</svg>';
