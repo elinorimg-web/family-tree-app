@@ -68,11 +68,11 @@ function drawExactTree(peopleMap, relationships, unionsList) {
     const cardW = 170, cardH = 145, gapX = 80, gapY = 75;
     const pos = {};
     let maxW = 600;
+    const globalPlaced = new Set();
 
     Object.keys(byGen).sort((a, b) => a - b).forEach(g => {
         const ids = byGen[g];
         const ordered = [];
-        const placed = new Set();
 
         const sortedIds = [...ids].sort((a, b) => {
             const countA = unionsList.filter(u => u.partner_1_id === a || u.partner_2_id === a).length;
@@ -81,14 +81,18 @@ function drawExactTree(peopleMap, relationships, unionsList) {
         });
 
         sortedIds.forEach(id => {
-            if (placed.has(id)) return;
+            if (globalPlaced.has(id)) return;
             const myUnions = unionsList.filter(u => u.partner_1_id === id || u.partner_2_id === id);
-            const divorced = myUnions.filter(u => u.union_status === 'divorced').map(u => u.partner_1_id === id ? u.partner_2_id : u.partner_1_id);
-            const married = myUnions.filter(u => u.union_status !== 'divorced').map(u => u.partner_1_id === id ? u.partner_2_id : u.partner_1_id);
+            const divorced = [...new Set(myUnions.filter(u => u.union_status === 'divorced').map(u => u.partner_1_id === id ? u.partner_2_id : u.partner_1_id))];
+            const married = [...new Set(myUnions.filter(u => u.union_status !== 'divorced').map(u => u.partner_1_id === id ? u.partner_2_id : u.partner_1_id))];
 
-            divorced.forEach(did => { if (ids.includes(did) && !placed.has(did)) { ordered.push(did); placed.add(did); } });
-            ordered.push(id); placed.add(id);
-            married.forEach(mid => { if (ids.includes(mid) && !placed.has(mid)) { ordered.push(mid); placed.add(mid); } });
+            divorced.forEach(did => {
+                if (ids.includes(did) && !globalPlaced.has(did)) { ordered.push(did); globalPlaced.add(did); }
+            });
+            if (!globalPlaced.has(id)) { ordered.push(id); globalPlaced.add(id); }
+            married.forEach(mid => {
+                if (ids.includes(mid) && !globalPlaced.has(mid)) { ordered.push(mid); globalPlaced.add(mid); }
+            });
         });
 
         const rowW = ordered.length * cardW + (ordered.length - 1) * gapX;
@@ -148,6 +152,6 @@ function drawExactTree(peopleMap, relationships, unionsList) {
     });
 
     svg += '</svg>';
-    let cardsHtml = people.map(p => buildPersonCardHTML(p, pos[p.person_id].x, pos[p.person_id].y)).join('');
+    let cardsHtml = people.filter(p => pos[p.person_id]).map(p => buildPersonCardHTML(p, pos[p.person_id].x, pos[p.person_id].y)).join('');
     return '<div class="svg-board" style="width:' + maxW + 'px; height:' + totalH + 'px;">' + svg + cardsHtml + '</div>';
 }
