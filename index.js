@@ -23,7 +23,6 @@ pool.query(`
     ADD COLUMN IF NOT EXISTS link_2 TEXT,
     ADD COLUMN IF NOT EXISTS death_type VARCHAR(30) DEFAULT 'regular';
 
-    DROP TABLE IF EXISTS unions CASCADE;
     CREATE TABLE unions (
         union_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         tree_id UUID REFERENCES trees(tree_id) ON DELETE CASCADE,
