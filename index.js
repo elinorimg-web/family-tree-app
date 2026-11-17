@@ -16,14 +16,12 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-// הוספת העמודות החדשות אוטומטית למסד הנתונים ב-Aiven
 pool.query(`
     ALTER TABLE individuals
     ADD COLUMN IF NOT EXISTS occupation VARCHAR(150),
     ADD COLUMN IF NOT EXISTS link_1 TEXT,
     ADD COLUMN IF NOT EXISTS link_2 TEXT;
-`).then(() => console.log('העמודות החדשות מוכנות!'))
-  .catch(err => console.error('שגיאה בעדכון עמודות:', err));
+`).catch(err => console.error(err));
 
 app.get('/api/trees', async (req, res) => {
     try {
@@ -49,6 +47,14 @@ app.post('/api/trees', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+app.delete('/api/trees/:treeId', async (req, res) => {
+    const { treeId } = req.params;
+    try {
+        await pool.query('DELETE FROM trees WHERE tree_id = $1', [treeId]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.get('/api/trees/:treeId/full', async (req, res) => {
     const { treeId } = req.params;
     try {
@@ -60,13 +66,13 @@ app.get('/api/trees/:treeId/full', async (req, res) => {
 
 app.post('/api/trees/:treeId/individuals', async (req, res) => {
     const { treeId } = req.params;
-    const { first_name, last_name, gender, occupation, birth_date_approx, birth_place, is_living, death_date_approx, link_1, link_2 } = req.body;
+    const { first_name, last_name, maiden_name, gender, occupation, birth_date_approx, birth_place, is_living, death_date_approx, link_1, link_2 } = req.body;
     try {
         const result = await pool.query(
             `INSERT INTO individuals 
-            (tree_id, first_name, last_name, gender, occupation, birth_date_approx, birth_place, is_living, death_date_approx, link_1, link_2) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
-            [treeId, first_name, last_name, gender || 'unknown', occupation || null, birth_date_approx, birth_place, is_living !== false, death_date_approx || null, link_1 || null, link_2 || null]
+            (tree_id, first_name, last_name, maiden_name, gender, occupation, birth_date_approx, birth_place, is_living, death_date_approx, link_1, link_2) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+            [treeId, first_name, last_name, maiden_name || null, gender || 'unknown', occupation || null, birth_date_approx, birth_place, is_living !== false, death_date_approx || null, link_1 || null, link_2 || null]
         );
         res.json(result.rows.at(0));
     } catch (err) { res.status(500).json({ error: err.message }); }
