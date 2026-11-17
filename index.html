@@ -10,9 +10,12 @@
     <h1>🌳 ניהול אילנות יוחסין (ללא הגבלה)</h1>
     <div class="box">
         <h2>1. בחירה או יצירת אילן חדש</h2>
-        <select id="treeSelect" style="width: 100%; font-weight: bold;">
-            <option value="">-- בחרי אילן קיים --</option>
-        </select>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <select id="treeSelect" style="flex: 1; font-weight: bold;">
+                <option value="">-- בחרי אילן קיים --</option>
+            </select>
+            <button id="btnDeleteTree" type="button" style="background: #dc2626; display: none;">🗑️ מחק אילן</button>
+        </div>
         <hr>
         <div class="grid">
             <input type="email" id="userEmail" placeholder="האימייל שלך">
@@ -27,6 +30,7 @@
                 <h2>2. הוספת אדם לאילן</h2>
                 <input type="text" id="firstName" placeholder="שם פרטי *" style="width:92%"><br>
                 <input type="text" id="lastName" placeholder="שם משפחה" style="width:92%"><br>
+                <input type="text" id="maidenName" placeholder="שם משפחה לפני נישואין (אופציונלי)" style="width:92%"><br>
                 <select id="gender" style="width:96%">
                     <option value="male">זכר</option>
                     <option value="female">נקבה</option>
