@@ -28,7 +28,6 @@
         <div class="box" id="personFormBox">
             <h2 id="formTitle">2. הוספת אדם לאילן</h2>
 
-            <!-- קישור מהיר לאדם קיים באילן -->
             <div id="existingPersonBox" style="display:none; background:#eff6ff; border:1px solid #bfdbfe; padding:12px; border-radius:8px; margin-bottom:15px;">
                 <strong>🔗 אפשרות 1: בחרי אדם שכבר קיים באילן לחיבור מיידי:</strong><br>
                 <div style="display:flex; gap:10px; margin-top:6px;">
@@ -60,7 +59,7 @@
                     <div id="deathFieldContainer" style="display:none; padding-right:15px; border-right:2px solid #cbd5e1;">
                         <select id="deathType" style="width:96%">
                             <option value="regular">פטירה רגילה (מסגרת שחורה)</option>
-                            <option value="holocaust">נספה בשואה הי״ד (מסגרת שחורה + צהובה)</option>
+                            <option value="holocaust">נספה בשואה הי״ד (מסגרת שחורה + צהובה/כתומה)</option>
                             <option value="idf">חלל צה״ל ז״ל (מסגרת שחורה + כחולה)</option>
                         </select><br>
                         <input type="text" id="deathApprox" placeholder="שנת/תאריך פטירה (אופציונלי)" style="width:92%"><br>
@@ -82,7 +81,6 @@
     </div>
 </div>
 
-<!-- תפריט קליק ימני צף -->
 <div id="contextMenu" style="display:none; position:fixed; background:white; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 4px 15px rgba(0,0,0,0.15); z-index:1000; min-width:190px; overflow:hidden;">
     <div style="background:#f1f5f9; padding:8px 12px; font-size:12px; font-weight:bold; color:#475569; border-bottom:1px solid #e2e8f0;" id="ctxHeader">הוספת/חיבור קרוב</div>
     <div class="ctx-item" onclick="startRelativeAdd('spouse_married')">💍 הוסף/חבר בן/בת זוג (נשואים)</div>
