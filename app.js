@@ -105,23 +105,8 @@ async function loadTreeData() {
     currentPeopleMap = {};
     currentRelationships = data.relationships;
     currentUnions = data.unions || [];
-    const childrenMap = {};
-    const hasParent = new Set();
-    data.people.forEach(p => { currentPeopleMap[p.person_id] = p; childrenMap[p.person_id] = []; });
-    data.relationships.forEach(r => { if (childrenMap[r.parent_id]) { childrenMap[r.parent_id].push(r.child_id); hasParent.add(r.child_id); } });
-
-    const renderedPeople = new Set();
-    const roots = data.people.filter(p => !hasParent.has(p.person_id));
-    let treeHtml = '<ul>';
-    roots.forEach(r => {
-        const u = currentUnions.find(un => un.partner_1_id === r.person_id || un.partner_2_id === r.person_id);
-        const spouseId = u ? (u.partner_1_id === r.person_id ? u.partner_2_id : u.partner_1_id) : null;
-        if (spouseId && hasParent.has(spouseId)) return;
-        treeHtml += renderFamilyUnit(r.person_id, currentPeopleMap, childrenMap, currentUnions, renderedPeople);
-    });
-    data.people.forEach(p => { if (!renderedPeople.has(p.person_id)) treeHtml += renderFamilyUnit(p.person_id, currentPeopleMap, childrenMap, currentUnions, renderedPeople); });
-    treeHtml += '</ul>';
-    document.getElementById('treeDiagram').innerHTML = data.people.length === 0 ? '<p>אין אנשים באילן.</p>' : treeHtml;
+    data.people.forEach(p => { currentPeopleMap[p.person_id] = p; });
+    document.getElementById('treeDiagram').innerHTML = drawExactTree(currentPeopleMap, currentRelationships, currentUnions);
 }
 
 async function savePerson() {
