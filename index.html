@@ -26,8 +26,8 @@
 
     <div id="workspace" style="display:none;">
         <div class="grid">
-            <div class="box">
-                <h2>2. הוספת אדם לאילן</h2>
+            <div class="box" id="personFormBox">
+                <h2 id="formTitle">2. הוספת אדם לאילן</h2>
                 <input type="text" id="firstName" placeholder="שם פרטי *" style="width:92%"><br>
                 <input type="text" id="lastName" placeholder="שם משפחה" style="width:92%"><br>
                 <input type="text" id="maidenName" placeholder="שם משפחה לפני נישואין (אופציונלי)" style="width:92%"><br>
@@ -48,7 +48,10 @@
                 </div>
                 <input type="url" id="link1" placeholder="קישור 1 (ויקיפדיה / יזכור)" style="width:92%"><br>
                 <input type="url" id="link2" placeholder="קישור 2 נוסף" style="width:92%"><br>
-                <button id="btnAddPerson" type="button">+ הוסף אדם לאילן</button>
+                <div style="display: flex; gap: 10px; margin-top: 8px;">
+                    <button id="btnAddPerson" type="button">+ הוסף אדם לאילן</button>
+                    <button id="btnCancelEdit" type="button" style="background: #64748b; display: none;">ביטול עריכה</button>
+                </div>
             </div>
 
             <div class="box">
