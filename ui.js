@@ -59,10 +59,10 @@ function renderFamilyUnit(personId, peopleMap, childrenMap, unionsList, rendered
         nodeHtml = buildPersonCardHTML(person);
     }
 
-    const childrenArr = Array.from(allChildren);
+    const childrenArr = Array.from(allChildren).filter(cid => peopleMap[cid] && !renderedPeople.has(cid));
     let html = '<li>' + nodeHtml;
     if (childrenArr.length > 0) {
-        html += '<ul>' + childrenArr.map(cid => renderFamilyUnit(cid, peopleMap, childrenMap, unionsList, renderedPeople)).join('') + '</ul>';
+        html += '<ul class="has-children">' + childrenArr.map(cid => renderFamilyUnit(cid, peopleMap, childrenMap, unionsList, renderedPeople)).join('') + '</ul>';
     }
     return html + '</li>';
 }
