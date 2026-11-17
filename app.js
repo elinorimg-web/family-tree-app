@@ -1,4 +1,6 @@
 let currentTreeId = null;
+let editingPersonId = null;
+let currentPeopleMap = {};
 
 document.getElementById('isDeceased').addEventListener('change', function() {
     document.getElementById('deathFieldContainer').style.display = this.checked ? 'block' : 'none';
@@ -40,9 +42,7 @@ async function deleteCurrentTree() {
     if (!currentTreeId) return;
     const select = document.getElementById('treeSelect');
     const treeName = select.options[select.selectedIndex].text;
-    if (!confirm('האם את בטוחה שברצונך למחוק לצמיתות את האילן "' + treeName + '" וכל האנשים שבתוכו?')) {
-        return;
-    }
+    if (!confirm('האם את בטוחה שברצונך למחוק לצמיתות את האילן "' + treeName + '"?')) return;
     await fetch('/api/trees/' + currentTreeId, { method: 'DELETE' });
     currentTreeId = null;
     document.getElementById('workspace').style.display = 'none';
@@ -62,6 +62,63 @@ function formatFullName(p) {
     return [lastNames, p.first_name].filter(Boolean).join(' ').trim();
 }
 
+function startEditPerson(personId) {
+    const p = currentPeopleMap[personId];
+    if (!p) return;
+    editingPersonId = personId;
+
+    document.getElementById('firstName').value = p.first_name || '';
+    document.getElementById('lastName').value = p.last_name || '';
+    document.getElementById('maidenName').value = p.maiden_name || '';
+    document.getElementById('gender').value = p.gender || 'unknown';
+    document.getElementById('occupation').value = p.occupation || '';
+    document.getElementById('birthApprox').value = p.birth_date_approx || '';
+    document.getElementById('birthPlace').value = p.birth_place || '';
+    
+    const isDeceased = p.is_living === false;
+    document.getElementById('isDeceased').checked = isDeceased;
+    document.getElementById('deathFieldContainer').style.display = isDeceased ? 'block' : 'none';
+    document.getElementById('deathApprox').value = p.death_date_approx || '';
+    
+    document.getElementById('link1').value = p.link_1 || '';
+    document.getElementById('link2').value = p.link_2 || '';
+
+    document.getElementById('formTitle').textContent = '✏️ עריכת פרטי אדם: ' + formatFullName(p);
+    document.getElementById('btnAddPerson').textContent = '💾 שמור שינויים';
+    document.getElementById('btnAddPerson').style.background = '#059669';
+    document.getElementById('btnCancelEdit').style.display = 'inline-block';
+    document.getElementById('personFormBox').scrollIntoView({ behavior: 'smooth' });
+}
+
+function cancelEdit() {
+    editingPersonId = null;
+    document.getElementById('firstName').value = '';
+    document.getElementById('lastName').value = '';
+    document.getElementById('maidenName').value = '';
+    document.getElementById('occupation').value = '';
+    document.getElementById('birthApprox').value = '';
+    document.getElementById('birthPlace').value = '';
+    document.getElementById('link1').value = '';
+    document.getElementById('link2').value = '';
+    document.getElementById('isDeceased').checked = false;
+    document.getElementById('deathFieldContainer').style.display = 'none';
+    document.getElementById('deathApprox').value = '';
+
+    document.getElementById('formTitle').textContent = '2. הוספת אדם לאילן';
+    document.getElementById('btnAddPerson').textContent = '+ הוסף אדם לאילן';
+    document.getElementById('btnAddPerson').style.background = '#1a56db';
+    document.getElementById('btnCancelEdit').style.display = 'none';
+}
+
+async function deletePerson(personId) {
+    const p = currentPeopleMap[personId];
+    if (!p) return;
+    if (!confirm('למחוק את "' + formatFullName(p) + '" מהאילן?')) return;
+    await fetch('/api/individuals/' + personId, { method: 'DELETE' });
+    if (editingPersonId === personId) cancelEdit();
+    loadTreeData();
+}
+
 function buildPersonCardHTML(p) {
     const isDeceased = p.is_living === false;
     const genderClass = p.gender === 'female' ? 'female' : '';
@@ -75,11 +132,17 @@ function buildPersonCardHTML(p) {
     if (p.link_1) linksHtml += '<a href="' + p.link_1 + '" target="_blank" class="ext-link">🔗 קישור 1</a>';
     if (p.link_2) linksHtml += '<a href="' + p.link_2 + '" target="_blank" class="ext-link">🔗 קישור 2</a>';
 
+    const actionsHtml = '<div style="margin-top: 8px; border-top: 1px solid #cbd5e1; padding-top: 5px; display: flex; justify-content: center; gap: 8px;">' +
+        '<button type="button" onclick="startEditPerson(\'' + p.person_id + '\')" style="padding: 2px 8px; font-size: 11px; background: #475569;">✏️ ערוך</button>' +
+        '<button type="button" onclick="deletePerson(\'' + p.person_id + '\')" style="padding: 2px 8px; font-size: 11px; background: #dc2626;">🗑️ מחק</button>' +
+    '</div>';
+
     return '<div class="node-card ' + genderClass + ' ' + deceasedClass + '">' +
         '<div class="node-name">' + formatFullName(p) + zalTag + '</div>' +
         (p.occupation ? '<div class="node-occ">' + p.occupation + '</div>' : '') +
         (dates || p.birth_place ? '<div class="node-dates">' + dates + ' ' + (p.birth_place ? '(' + p.birth_place + ')' : '') + '</div>' : '') +
         (linksHtml ? '<div class="node-links">' + linksHtml + '</div>' : '') +
+        actionsHtml +
     '</div>';
 }
 
@@ -116,12 +179,12 @@ async function loadTreeData() {
     const cSel = document.getElementById('childSelect');
     pSel.innerHTML = ''; cSel.innerHTML = '';
 
-    const peopleMap = {};
+    currentPeopleMap = {};
     const childrenMap = {};
     const hasParent = new Set();
 
     data.people.forEach(p => {
-        peopleMap[p.person_id] = p;
+        currentPeopleMap[p.person_id] = p;
         childrenMap[p.person_id] = [];
         const fullName = formatFullName(p);
         pSel.innerHTML += '<option value="' + p.person_id + '">' + fullName + '</option>';
@@ -141,13 +204,13 @@ async function loadTreeData() {
         diagramDiv.innerHTML = '<p>עדיין אין אנשים באילן זה.</p>';
     } else {
         let treeHtml = '<ul>';
-        roots.forEach(root => { treeHtml += renderTreeRecursive(root.person_id, peopleMap, childrenMap); });
+        roots.forEach(root => { treeHtml += renderTreeRecursive(root.person_id, currentPeopleMap, childrenMap); });
         treeHtml += '</ul>';
         diagramDiv.innerHTML = treeHtml;
     }
 }
 
-async function addPerson() {
+async function savePerson() {
     const isDeceased = document.getElementById('isDeceased').checked;
     const body = {
         first_name: document.getElementById('firstName').value,
@@ -162,39 +225,3 @@ async function addPerson() {
         link_1: document.getElementById('link1').value,
         link_2: document.getElementById('link2').value
     };
-    if (!body.first_name) return alert('חובה להזין שם פרטי');
-    await fetch('/api/trees/' + currentTreeId + '/individuals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-    });
-    document.getElementById('firstName').value = '';
-    document.getElementById('maidenName').value = '';
-    document.getElementById('occupation').value = '';
-    document.getElementById('birthApprox').value = '';
-    document.getElementById('link1').value = '';
-    document.getElementById('link2').value = '';
-    document.getElementById('isDeceased').checked = false;
-    document.getElementById('deathFieldContainer').style.display = 'none';
-    loadTreeData();
-}
-
-async function addRelationship() {
-    const parent_id = document.getElementById('parentSelect').value;
-    const child_id = document.getElementById('childSelect').value;
-    if (parent_id === child_id) return alert('אדם לא יכול להיות הורה של עצמו');
-    await fetch('/api/trees/' + currentTreeId + '/relationships', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ parent_id, child_id })
-    });
-    loadTreeData();
-}
-
-document.getElementById('treeSelect').addEventListener('change', loadTreeData);
-document.getElementById('btnCreateTree').addEventListener('click', createTree);
-document.getElementById('btnDeleteTree').addEventListener('click', deleteCurrentTree);
-document.getElementById('btnAddPerson').addEventListener('click', addPerson);
-document.getElementById('btnAddRel').addEventListener('click', addRelationship);
-
-loadTrees();
