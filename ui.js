@@ -71,7 +71,7 @@ function drawExactTree(peopleMap, relationships, unionsList) {
         if (!parentsByChild[r.child_id].includes(r.parent_id)) parentsByChild[r.child_id].push(r.parent_id);
     });
 
-    const cardW = 170, cardH = 145, gapX = 80, gapY = 85;
+    const cardW = 170, cardH = 145, gapX = 80, gapY = 95;
     const pos = {};
     let maxW = 600;
     const globalPlaced = new Set();
@@ -80,7 +80,6 @@ function drawExactTree(peopleMap, relationships, unionsList) {
         const ids = byGen[g];
         const ordered = [];
 
-        // מיון ראשוני לפי מיקום ההורים מהדור הקודם כדי למנוע הצלבת קווים
         const sortedIds = [...ids].sort((a, b) => {
             const pA = (parentsByChild[a] || []).filter(pid => pos[pid]);
             const pB = (parentsByChild[b] || []).filter(pid => pos[pid]);
@@ -138,11 +137,21 @@ function drawExactTree(peopleMap, relationships, unionsList) {
         }
     });
 
+    // מתן גובה קו אופקי נפרד לכל קבוצת הורים כדי שקווים של משפחות שונות לא יתמזגו לקו אחים אחד
+    const parentGroupLevels = {};
+    let groupCounter = 0;
+
     Object.keys(parentsByChild).forEach(childId => {
         const cPos = pos[childId];
         if (!cPos) return;
-        const pIds = parentsByChild[childId].filter(pid => pos[pid]);
+        const pIds = parentsByChild[childId].filter(pid => pos[pid]).sort();
         if (pIds.length === 0) return;
+
+        const groupKey = pIds.join('_');
+        if (parentGroupLevels[groupKey] === undefined) {
+            parentGroupLevels[groupKey] = groupCounter++;
+        }
+        const levelOffset = (parentGroupLevels[groupKey] % 4) * 12;
 
         let startX, startY;
         if (pIds.length >= 2) {
@@ -156,7 +165,7 @@ function drawExactTree(peopleMap, relationships, unionsList) {
         }
         const endX = cPos.x + cardW / 2;
         const endY = cPos.y;
-        const midY = startY + (endY - startY) * 0.55;
+        const midY = (pIds.length >= 2 ? (pos[pIds.at(0)].y + cardH) : startY) + 22 + levelOffset;
         svg += '<path d="M ' + startX + ' ' + startY + ' L ' + startX + ' ' + midY + ' L ' + endX + ' ' + midY + ' L ' + endX + ' ' + endY + '" fill="none" stroke="#475569" stroke-width="2.5"/>';
     });
 
