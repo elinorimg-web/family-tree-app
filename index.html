@@ -25,51 +25,62 @@
     </div>
 
     <div id="workspace" style="display:none;">
-        <div class="grid">
-            <div class="box" id="personFormBox">
-                <h2 id="formTitle">2. הוספת אדם לאילן</h2>
-                <input type="text" id="firstName" placeholder="שם פרטי *" style="width:92%"><br>
-                <input type="text" id="lastName" placeholder="שם משפחה" style="width:92%"><br>
-                <input type="text" id="maidenName" placeholder="שם משפחה לפני נישואין (אופציונלי)" style="width:92%"><br>
-                <select id="gender" style="width:96%">
-                    <option value="male">זכר</option>
-                    <option value="female">נקבה</option>
-                    <option value="unknown">לא ידוע</option>
-                </select><br>
-                <input type="text" id="occupation" placeholder="עיסוק עיקרי" style="width:92%"><br>
-                <input type="text" id="birthApprox" placeholder="שנת/תאריך לידה" style="width:92%"><br>
-                <input type="text" id="birthPlace" placeholder="מקום לידה" style="width:92%"><br>
-                <label class="checkbox-row">
-                    <input type="checkbox" id="isDeceased">
-                    <span>נפטר/ה (ז״ל) - מסגרת שחורה עבה</span>
-                </label>
-                <div id="deathFieldContainer" style="display:none;">
-                    <input type="text" id="deathApprox" placeholder="שנת/תאריך פטירה" style="width:92%"><br>
+        <div class="box" id="personFormBox">
+            <h2 id="formTitle">2. הוספת אדם לאילן</h2>
+            <div class="grid">
+                <div>
+                    <input type="text" id="firstName" placeholder="שם פרטי *" style="width:94%"><br>
+                    <input type="text" id="lastName" placeholder="שם משפחה" style="width:94%"><br>
+                    <input type="text" id="maidenName" placeholder="שם משפחה לפני נישואין (אופציונלי)" style="width:94%"><br>
+                    <select id="gender" style="width:98%">
+                        <option value="male">זכר</option>
+                        <option value="female">נקבה</option>
+                        <option value="unknown">לא ידוע</option>
+                    </select><br>
+                    <input type="text" id="occupation" placeholder="עיסוק עיקרי" style="width:94%"><br>
                 </div>
-                <input type="url" id="link1" placeholder="קישור 1 (ויקיפדיה / יזכור)" style="width:92%"><br>
-                <input type="url" id="link2" placeholder="קישור 2 נוסף" style="width:92%"><br>
-                <div style="display: flex; gap: 10px; margin-top: 8px;">
-                    <button id="btnAddPerson" type="button">+ הוסף אדם לאילן</button>
-                    <button id="btnCancelEdit" type="button" style="background: #64748b; display: none;">ביטול עריכה</button>
+                <div>
+                    <input type="text" id="birthApprox" placeholder="שנת/תאריך לידה" style="width:94%"><br>
+                    <input type="text" id="birthPlace" placeholder="מקום לידה" style="width:94%"><br>
+                    <label class="checkbox-row">
+                        <input type="checkbox" id="isDeceased">
+                        <span>נפטר/ה (ז״ל) - מסגרת שחורה עבה</span>
+                    </label>
+                    <div id="deathFieldContainer" style="display:none;">
+                        <input type="text" id="deathApprox" placeholder="שנת/תאריך פטירה" style="width:94%"><br>
+                    </div>
+                    <input type="url" id="link1" placeholder="קישור 1 (ויקיפדיה / יזכור)" style="width:94%"><br>
+                    <input type="url" id="link2" placeholder="קישור 2 נוסף" style="width:94%"><br>
                 </div>
             </div>
-
-            <div class="box">
-                <h2>3. הגדרת קשר הורה - ילד</h2>
-                <label>בחרי הורה:</label><br>
-                <select id="parentSelect" style="width:96%"></select><br><br>
-                <label>בחרי ילד/ה:</label><br>
-                <select id="childSelect" style="width:96%"></select><br><br>
-                <button id="btnAddRel" type="button">🔗 חבר הורה וילד</button>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button id="btnAddPerson" type="button">+ הוסף אדם לאילן</button>
+                <button id="btnCancelEdit" type="button" style="background: #64748b; display: none;">ביטול</button>
             </div>
         </div>
 
         <div class="box">
-            <h2>🖼️ תרשים אילן היוחסין</h2>
+            <h2>🖼️ תרשים אילן היוחסין <small style="font-size: 13px; color: #64748b; font-weight: normal;">(לחצי קליק ימני על אדם להוספת אבא, אמא, אח, אחות או ילדים)</small></h2>
             <div class="tree-canvas"><div id="treeDiagram" class="tree"></div></div>
         </div>
     </div>
 </div>
+
+<!-- תפריט קליק ימני צף -->
+<div id="contextMenu" style="display:none; position:fixed; background:white; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 4px 15px rgba(0,0,0,0.15); z-index:1000; min-width:170px; overflow:hidden;">
+    <div style="background:#f1f5f9; padding:8px 12px; font-size:12px; font-weight:bold; color:#475569; border-bottom:1px solid #e2e8f0;" id="ctxHeader">הוספת קרוב משפחה</div>
+    <div class="ctx-item" onclick="startRelativeAdd('father')">👨 הוסף אבא</div>
+    <div class="ctx-item" onclick="startRelativeAdd('mother')">👩 הוסף אמא</div>
+    <div class="ctx-item" onclick="startRelativeAdd('brother')">👦 הוסף אח</div>
+    <div class="ctx-item" onclick="startRelativeAdd('sister')">👧 הוסף אחות</div>
+    <div class="ctx-item" onclick="startRelativeAdd('son')">👶 הוסף בן</div>
+    <div class="ctx-item" onclick="startRelativeAdd('daughter')">👧 הוסף בת</div>
+</div>
+<style>
+    .ctx-item { padding: 9px 14px; cursor: pointer; font-size: 14px; color: #1e293b; transition: background 0.15s; }
+    .ctx-item:hover { background: #eff6ff; color: #1a56db; font-weight: bold; }
+</style>
+
 <script src="ui.js"></script>
 <script src="app.js"></script>
 </body>
