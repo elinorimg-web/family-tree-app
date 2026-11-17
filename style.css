@@ -8,23 +8,52 @@ button:hover { background: #1e40af; }
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 .checkbox-row { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-weight: bold; cursor: pointer; }
 .checkbox-row input { width: 17px; height: 17px; cursor: pointer; }
-.tree-canvas { overflow-x: auto; padding: 20px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; text-align: center; }
-.tree ul { padding-top: 20px; position: relative; display: flex; justify-content: center; padding-right: 0; margin: 0; }
-.tree li { list-style-type: none; text-align: center; position: relative; padding: 20px 10px 0 10px; }
-.tree li::before, .tree li::after { content: ''; position: absolute; top: 0; left: 50%; border-top: 2px solid #94a3b8; width: 50%; height: 20px; }
-.tree li::after { right: 50%; left: auto; border-right: 2px solid #94a3b8; }
+.tree-canvas { overflow-x: auto; padding: 25px 20px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; text-align: center; }
+.tree ul { padding-top: 24px; position: relative; display: flex; justify-content: center; padding-right: 0; margin: 0; }
+.tree li { list-style-type: none; text-align: center; position: relative; padding: 24px 12px 0 12px; }
+.tree li::before, .tree li::after { content: ''; position: absolute; top: 0; left: 50%; border-top: 2px solid #64748b; width: 50%; height: 24px; }
+.tree li::after { right: 50%; left: auto; border-right: 2px solid #64748b; }
 .tree li:only-child::after, .tree li:only-child::before { display: none; }
 .tree li:only-child { padding-top: 0; }
 .tree li:first-child::before, .tree li:last-child::after { border: 0 none; }
-.tree li:last-child::before { border-right: 2px solid #94a3b8; border-radius: 0 5px 0 0; }
+.tree li:last-child::before { border-right: 2px solid #64748b; border-radius: 0 5px 0 0; }
 .tree li:first-child::after { border-radius: 5px 0 0 0; }
-.tree ul ul::before { content: ''; position: absolute; top: 0; left: 50%; border-left: 2px solid #94a3b8; width: 0; height: 20px; }
+.tree ul ul::before { content: ''; position: absolute; top: 0; left: 50%; border-left: 3px solid #475569; width: 0; height: 24px; }
 
-/* זוגות נשואים / גרושים */
-.couple-wrap { display: inline-flex; align-items: center; justify-content: center; gap: 0; }
-.spouse-line { width: 34px; height: 0; border-top: 3px solid #1e293b; position: relative; }
-.spouse-line.divorced { border-top: 3px dashed #dc2626; }
-.spouse-badge { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 11px; background: white; padding: 0 3px; border-radius: 4px; white-space: nowrap; }
+/* זוגות נשואים / גרושים מאוחדים מעל הילדים */
+.couple-wrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    padding: 8px 10px;
+    border-radius: 14px;
+    position: relative;
+}
+.spouse-line {
+    width: 54px;
+    height: 0;
+    border-top: 4px solid #1e293b;
+    position: relative;
+    margin: 0 4px;
+}
+.spouse-line.divorced {
+    border-top: 4px dashed #dc2626 !important;
+}
+.spouse-badge {
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    font-weight: bold;
+    background: white;
+    border: 1px solid #cbd5e1;
+    padding: 1px 6px;
+    border-radius: 10px;
+    white-space: nowrap;
+}
 
 /* קוביית אדם והמסגרות המיוחדות */
 .node-card { display: inline-block; background: #eff6ff; border: 2px solid #3b82f6; border-radius: 10px; padding: 10px 14px; min-width: 145px; max-width: 210px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); text-align: center; vertical-align: top; }
