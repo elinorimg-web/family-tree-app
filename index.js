@@ -78,6 +78,29 @@ app.post('/api/trees/:treeId/individuals', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+app.put('/api/individuals/:personId', async (req, res) => {
+    const { personId } = req.params;
+    const { first_name, last_name, maiden_name, gender, occupation, birth_date_approx, birth_place, is_living, death_date_approx, link_1, link_2 } = req.body;
+    try {
+        const result = await pool.query(
+            `UPDATE individuals SET 
+            first_name=$1, last_name=$2, maiden_name=$3, gender=$4, occupation=$5, 
+            birth_date_approx=$6, birth_place=$7, is_living=$8, death_date_approx=$9, link_1=$10, link_2=$11
+            WHERE person_id=$12 RETURNING *`,
+            [first_name, last_name, maiden_name || null, gender || 'unknown', occupation || null, birth_date_approx, birth_place, is_living !== false, death_date_approx || null, link_1 || null, link_2 || null, personId]
+        );
+        res.json(result.rows.at(0));
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/individuals/:personId', async (req, res) => {
+    const { personId } = req.params;
+    try {
+        await pool.query('DELETE FROM individuals WHERE person_id = $1', [personId]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.post('/api/trees/:treeId/relationships', async (req, res) => {
     const { treeId } = req.params;
     const { parent_id, child_id } = req.body;
