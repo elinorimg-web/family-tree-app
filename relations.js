@@ -5,7 +5,7 @@ function openContextMenu(e, personId) {
     document.getElementById('ctxHeader').textContent = 'קרובים עבור: ' + (p ? p.first_name : '');
     const menu = document.getElementById('contextMenu');
     menu.style.display = 'block';
-    menu.style.left = Math.min(e.clientX, window.innerWidth - 210) + 'px';
+    menu.style.left = Math.min(e.clientX, window.innerWidth - 220) + 'px';
     menu.style.top = e.clientY + 'px';
 }
 
@@ -52,7 +52,7 @@ async function applyRelationBetween(relType, targetId, otherPersonId) {
         await fetch('/api/trees/' + currentTreeId + '/relationships', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ parent_id: targetId, child_id: otherPersonId }) });
     } else if (relType === 'brother' || relType === 'sister') {
         const parents = currentRelationships.filter(r => r.child_id === targetId).map(r => r.parent_id);
-        if (parents.length === 0) alert('לאדם זה עדיין לא הוגדרו הורים, ולכן לא ניתן לקשר אחים אוטומטית. הוסיפי הורה קודם.');
+        if (parents.length === 0) alert('לאדם זה עדיין לא הוגדרו הורים, ולכן לא ניתן לקשר אחים אוטומטית.');
         for (const pid of parents) {
             await fetch('/api/trees/' + currentTreeId + '/relationships', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ parent_id: pid, child_id: otherPersonId }) });
         }
@@ -67,4 +67,58 @@ async function linkExistingPerson() {
     if (!existingId || !pendingRelation) return alert('נא לבחור אדם מהרשימה');
     await applyRelationBetween(pendingRelation.type, pendingRelation.targetId, existingId);
     cancelEdit(); loadTreeData();
+}
+
+function openDisconnectModal() {
+    const pid = contextTargetPersonId;
+    const person = currentPeopleMap[pid];
+    if (!person) return;
+    document.getElementById('discTitle').textContent = '✂️ ניתוק קשרים עבור: ' + formatFullName(person);
+    const list = document.getElementById('discList');
+    list.innerHTML = '';
+
+    const myUnions = currentUnions.filter(u => u.partner_1_id === pid || u.partner_2_id === pid);
+    myUnions.forEach(u => {
+        const otherId = u.partner_1_id === pid ? u.partner_2_id : u.partner_1_id;
+        const other = currentPeopleMap[otherId];
+        if (other) {
+            list.innerHTML += '<div class="rel-row"><span>💍/💔 זוגיות עם: <strong>' + formatFullName(other) + '</strong></span>' +
+                '<button type="button" onclick="removeUnion(' + u.union_id + ')" style="background:#dc2626; padding:4px 10px; font-size:12px;">נתק</button></div>';
+        }
+    });
+
+    const myParents = currentRelationships.filter(r => r.child_id === pid);
+    myParents.forEach(r => {
+        const parent = currentPeopleMap[r.parent_id];
+        if (parent) {
+            list.innerHTML += '<div class="rel-row"><span>⬆️ הורה: <strong>' + formatFullName(parent) + '</strong></span>' +
+                '<button type="button" onclick="removeRel(\'' + r.parent_id + '\', \'' + pid + '\')" style="background:#dc2626; padding:4px 10px; font-size:12px;">נתק</button></div>';
+        }
+    });
+
+    const myChildren = currentRelationships.filter(r => r.parent_id === pid);
+    myChildren.forEach(r => {
+        const child = currentPeopleMap[r.child_id];
+        if (child) {
+            list.innerHTML += '<div class="rel-row"><span>⬇️ ילד/ה: <strong>' + formatFullName(child) + '</strong></span>' +
+                '<button type="button" onclick="removeRel(\'' + pid + '\', \'' + r.child_id + '\')" style="background:#dc2626; padding:4px 10px; font-size:12px;">נתק</button></div>';
+        }
+    });
+
+    if (!list.innerHTML) list.innerHTML = '<p>אין קשרים מחוברים לאדם זה.</p>';
+    document.getElementById('disconnectModal').style.display = 'flex';
+}
+
+async function removeUnion(unionId) {
+    await fetch('/api/unions/' + unionId, { method: 'DELETE' });
+    document.getElementById('disconnectModal').style.display = 'none';
+    loadTreeData();
+}
+
+async function removeRel(parentId, childId) {
+    await fetch('/api/trees/' + currentTreeId + '/relationships', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ parent_id: parentId, child_id: childId })
+    });
+    document.getElementById('disconnectModal').style.display = 'none';
+    loadTreeData();
 }
