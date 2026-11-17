@@ -49,8 +49,8 @@ function renderFamilyUnit(personId, peopleMap, childrenMap, unionsList, rendered
                 renderedPeople.add(spouseId);
                 (childrenMap[spouseId] || []).forEach(c => allChildren.add(c));
                 const isDivorced = u.union_status === 'divorced';
-                nodeHtml += '<div class="spouse-line ' + (isDivorced ? 'divorced' : '') + '">' +
-                    '<span class="spouse-badge">' + (isDivorced ? 'גרושים' : '💍') + '</span></div>' +
+                const badgeHtml = isDivorced ? '' : '<span class="spouse-badge">💍</span>';
+                nodeHtml += '<div class="spouse-line ' + (isDivorced ? 'divorced' : '') + '">' + badgeHtml + '</div>' +
                     buildPersonCardHTML(spouse);
             }
         });
