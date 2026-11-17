@@ -23,8 +23,7 @@ pool.query(`
     ADD COLUMN IF NOT EXISTS link_2 TEXT,
     ADD COLUMN IF NOT EXISTS death_type VARCHAR(30) DEFAULT 'regular';
 
-    DROP TABLE IF EXISTS unions CASCADE;
-    CREATE TABLE unions (
+    CREATE TABLE IF NOT EXISTS unions (
         union_id SERIAL PRIMARY KEY,
         tree_id UUID REFERENCES trees(tree_id) ON DELETE CASCADE,
         partner_1_id UUID REFERENCES individuals(person_id) ON DELETE CASCADE,
@@ -32,7 +31,7 @@ pool.query(`
         union_status VARCHAR(30) DEFAULT 'married',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
-`).then(() => console.log('טבלת הזוגות מוכנה!'))
+`).then(() => console.log('מסד הנתונים מוכן ושמור!'))
   .catch(err => console.error('שגיאת אתחול:', err));
 
 app.get('/api/trees', async (req, res) => {
@@ -71,7 +70,7 @@ app.get('/api/trees/:treeId/full', async (req, res) => {
     try {
         const people = await pool.query('SELECT * FROM individuals WHERE tree_id = $1 ORDER BY created_at ASC', [treeId]);
         const rels = await pool.query('SELECT * FROM parent_child_relationships WHERE tree_id = $1', [treeId]);
-        const unions = await pool.query('SELECT * FROM unions WHERE tree_id = $1', [treeId]);
+        const unions = await pool.query('SELECT * FROM unions WHERE tree_id = $1 ORDER BY created_at ASC', [treeId]);
         res.json({ people: people.rows, relationships: rels.rows, unions: unions.rows });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
