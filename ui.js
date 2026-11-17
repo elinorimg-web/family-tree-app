@@ -65,7 +65,13 @@ function drawExactTree(peopleMap, relationships, unionsList) {
     const byGen = {};
     people.forEach(p => { const g = gen[p.person_id]; if (!byGen[g]) byGen[g] = []; byGen[g].push(p.person_id); });
 
-    const cardW = 170, cardH = 145, gapX = 80, gapY = 75;
+    const parentsByChild = {};
+    relationships.forEach(r => {
+        if (!parentsByChild[r.child_id]) parentsByChild[r.child_id] = [];
+        if (!parentsByChild[r.child_id].includes(r.parent_id)) parentsByChild[r.child_id].push(r.parent_id);
+    });
+
+    const cardW = 170, cardH = 145, gapX = 80, gapY = 85;
     const pos = {};
     let maxW = 600;
     const globalPlaced = new Set();
@@ -74,7 +80,13 @@ function drawExactTree(peopleMap, relationships, unionsList) {
         const ids = byGen[g];
         const ordered = [];
 
+        // מיון ראשוני לפי מיקום ההורים מהדור הקודם כדי למנוע הצלבת קווים
         const sortedIds = [...ids].sort((a, b) => {
+            const pA = (parentsByChild[a] || []).filter(pid => pos[pid]);
+            const pB = (parentsByChild[b] || []).filter(pid => pos[pid]);
+            const avgA = pA.length ? pA.reduce((s, pid) => s + pos[pid].x, 0) / pA.length : 99999;
+            const avgB = pB.length ? pB.reduce((s, pid) => s + pos[pid].x, 0) / pB.length : 99999;
+            if (avgA !== avgB) return avgA - avgB;
             const countA = unionsList.filter(u => u.partner_1_id === a || u.partner_2_id === a).length;
             const countB = unionsList.filter(u => u.partner_1_id === b || u.partner_2_id === b).length;
             return countB - countA;
@@ -125,9 +137,6 @@ function drawExactTree(peopleMap, relationships, unionsList) {
             svg += '<text x="' + midX + '" y="' + (y - 10) + '" text-anchor="middle" font-size="16">💍</text>';
         }
     });
-
-    const parentsByChild = {};
-    relationships.forEach(r => { if (!parentsByChild[r.child_id]) parentsByChild[r.child_id] = []; parentsByChild[r.child_id].push(r.parent_id); });
 
     Object.keys(parentsByChild).forEach(childId => {
         const cPos = pos[childId];
