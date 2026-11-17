@@ -36,6 +36,18 @@ async function createTree() {
     loadTreeData();
 }
 
+function formatFullName(p) {
+    let lastNames = '';
+    if (p.maiden_name && p.last_name) {
+        lastNames = p.maiden_name + ' - ' + p.last_name;
+    } else if (p.maiden_name) {
+        lastNames = p.maiden_name;
+    } else if (p.last_name) {
+        lastNames = p.last_name;
+    }
+    return [lastNames, p.first_name].filter(Boolean).join(' ').trim();
+}
+
 function buildPersonCardHTML(p) {
     const isDeceased = p.is_living === false;
     const genderClass = p.gender === 'female' ? 'female' : '';
@@ -50,7 +62,7 @@ function buildPersonCardHTML(p) {
     if (p.link_2) linksHtml += '<a href="' + p.link_2 + '" target="_blank" class="ext-link">🔗 קישור 2</a>';
 
     return '<div class="node-card ' + genderClass + ' ' + deceasedClass + '">' +
-        '<div class="node-name">' + p.first_name + ' ' + (p.last_name || '') + zalTag + '</div>' +
+        '<div class="node-name">' + formatFullName(p) + zalTag + '</div>' +
         (p.occupation ? '<div class="node-occ">' + p.occupation + '</div>' : '') +
         (dates || p.birth_place ? '<div class="node-dates">' + dates + ' ' + (p.birth_place ? '(' + p.birth_place + ')' : '') + '</div>' : '') +
         (linksHtml ? '<div class="node-links">' + linksHtml + '</div>' : '') +
@@ -91,7 +103,7 @@ async function loadTreeData() {
     data.people.forEach(p => {
         peopleMap[p.person_id] = p;
         childrenMap[p.person_id] = [];
-        const fullName = p.first_name + ' ' + (p.last_name || '');
+        const fullName = formatFullName(p);
         pSel.innerHTML += '<option value="' + p.person_id + '">' + fullName + '</option>';
         cSel.innerHTML += '<option value="' + p.person_id + '">' + fullName + '</option>';
     });
@@ -120,6 +132,7 @@ async function addPerson() {
     const body = {
         first_name: document.getElementById('firstName').value,
         last_name: document.getElementById('lastName').value,
+        maiden_name: document.getElementById('maidenName').value,
         gender: document.getElementById('gender').value,
         occupation: document.getElementById('occupation').value,
         birth_date_approx: document.getElementById('birthApprox').value,
@@ -136,6 +149,7 @@ async function addPerson() {
         body: JSON.stringify(body)
     });
     document.getElementById('firstName').value = '';
+    document.getElementById('maidenName').value = '';
     document.getElementById('occupation').value = '';
     document.getElementById('birthApprox').value = '';
     document.getElementById('link1').value = '';
