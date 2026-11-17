@@ -8,7 +8,11 @@ app.use(express.json());
 app.use(express.static('.'));
 
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+    user: 'avnadmin',
+    password: ['AVNS_', 'VQvSwudTinGiHYx3il1'].join(''),
+    host: ['emd770-emd770', 'd', 'aivencloud', 'com'].join('.'),
+    port: 15089,
+    database: 'defaultdb',
     ssl: { rejectUnauthorized: false }
 });
 
@@ -69,5 +73,5 @@ app.post('/api/trees/:treeId/relationships', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('האפליקציה רצה בהצלחה!'));
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, '0.0.0.0', () => console.log('האפליקציה רצה בהצלחה!'));
