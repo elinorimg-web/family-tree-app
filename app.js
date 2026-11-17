@@ -36,6 +36,20 @@ async function createTree() {
     loadTreeData();
 }
 
+async function deleteCurrentTree() {
+    if (!currentTreeId) return;
+    const select = document.getElementById('treeSelect');
+    const treeName = select.options[select.selectedIndex].text;
+    if (!confirm('האם את בטוחה שברצונך למחוק לצמיתות את האילן "' + treeName + '" וכל האנשים שבתוכו?')) {
+        return;
+    }
+    await fetch('/api/trees/' + currentTreeId, { method: 'DELETE' });
+    currentTreeId = null;
+    document.getElementById('workspace').style.display = 'none';
+    document.getElementById('btnDeleteTree').style.display = 'none';
+    await loadTrees();
+}
+
 function formatFullName(p) {
     let lastNames = '';
     if (p.maiden_name && p.last_name) {
@@ -87,8 +101,14 @@ function renderTreeRecursive(personId, peopleMap, childrenMap, visited = new Set
 
 async function loadTreeData() {
     currentTreeId = document.getElementById('treeSelect').value;
-    if (!currentTreeId) { document.getElementById('workspace').style.display = 'none'; return; }
+    const deleteBtn = document.getElementById('btnDeleteTree');
+    if (!currentTreeId) {
+        document.getElementById('workspace').style.display = 'none';
+        deleteBtn.style.display = 'none';
+        return;
+    }
     document.getElementById('workspace').style.display = 'block';
+    deleteBtn.style.display = 'inline-block';
 
     const res = await fetch('/api/trees/' + currentTreeId + '/full');
     const data = await res.json();
@@ -173,6 +193,7 @@ async function addRelationship() {
 
 document.getElementById('treeSelect').addEventListener('change', loadTreeData);
 document.getElementById('btnCreateTree').addEventListener('click', createTree);
+document.getElementById('btnDeleteTree').addEventListener('click', deleteCurrentTree);
 document.getElementById('btnAddPerson').addEventListener('click', addPerson);
 document.getElementById('btnAddRel').addEventListener('click', addRelationship);
 
