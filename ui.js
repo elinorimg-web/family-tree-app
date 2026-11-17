@@ -71,21 +71,25 @@ function drawExactTree(peopleMap, relationships, unionsList) {
         if (!parentsByChild[r.child_id].includes(r.parent_id)) parentsByChild[r.child_id].push(r.parent_id);
     });
 
-    const cardW = 170, cardH = 145, gapX = 80, gapY = 95;
+    const cardW = 170, cardH = 145, gapX = 80, gapY = 105;
     const pos = {};
     let maxW = 600;
     const globalPlaced = new Set();
+
+    function getAnchorX(childId) {
+        const pIds = (parentsByChild[childId] || []).filter(pid => pos[pid]);
+        if (pIds.length === 0) return 999999;
+        if (pIds.length >= 2) return (pos[pIds.at(0)].x + pos[pIds.at(1)].x + cardW) / 2;
+        return pos[pIds.at(0)].x + cardW / 2;
+    }
 
     Object.keys(byGen).sort((a, b) => a - b).forEach(g => {
         const ids = byGen[g];
         const ordered = [];
 
         const sortedIds = [...ids].sort((a, b) => {
-            const pA = (parentsByChild[a] || []).filter(pid => pos[pid]);
-            const pB = (parentsByChild[b] || []).filter(pid => pos[pid]);
-            const avgA = pA.length ? pA.reduce((s, pid) => s + pos[pid].x, 0) / pA.length : 99999;
-            const avgB = pB.length ? pB.reduce((s, pid) => s + pos[pid].x, 0) / pB.length : 99999;
-            if (avgA !== avgB) return avgA - avgB;
+            const ax = getAnchorX(a), bx = getAnchorX(b);
+            if (ax !== bx) return ax - bx;
             const countA = unionsList.filter(u => u.partner_1_id === a || u.partner_2_id === a).length;
             const countB = unionsList.filter(u => u.partner_1_id === b || u.partner_2_id === b).length;
             return countB - countA;
@@ -137,7 +141,6 @@ function drawExactTree(peopleMap, relationships, unionsList) {
         }
     });
 
-    // מתן גובה קו אופקי נפרד לכל קבוצת הורים כדי שקווים של משפחות שונות לא יתמזגו לקו אחים אחד
     const parentGroupLevels = {};
     let groupCounter = 0;
 
@@ -151,7 +154,7 @@ function drawExactTree(peopleMap, relationships, unionsList) {
         if (parentGroupLevels[groupKey] === undefined) {
             parentGroupLevels[groupKey] = groupCounter++;
         }
-        const levelOffset = (parentGroupLevels[groupKey] % 4) * 12;
+        const levelOffset = (parentGroupLevels[groupKey] % 5) * 14;
 
         let startX, startY;
         if (pIds.length >= 2) {
@@ -165,7 +168,7 @@ function drawExactTree(peopleMap, relationships, unionsList) {
         }
         const endX = cPos.x + cardW / 2;
         const endY = cPos.y;
-        const midY = (pIds.length >= 2 ? (pos[pIds.at(0)].y + cardH) : startY) + 22 + levelOffset;
+        const midY = (pIds.length >= 2 ? (pos[pIds.at(0)].y + cardH) : startY) + 18 + levelOffset;
         svg += '<path d="M ' + startX + ' ' + startY + ' L ' + startX + ' ' + midY + ' L ' + endX + ' ' + midY + ' L ' + endX + ' ' + endY + '" fill="none" stroke="#475569" stroke-width="2.5"/>';
     });
 
