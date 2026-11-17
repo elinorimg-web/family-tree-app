@@ -23,8 +23,9 @@ pool.query(`
     ADD COLUMN IF NOT EXISTS link_2 TEXT,
     ADD COLUMN IF NOT EXISTS death_type VARCHAR(30) DEFAULT 'regular';
 
+    DROP TABLE IF EXISTS unions CASCADE;
     CREATE TABLE unions (
-        union_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        union_id SERIAL PRIMARY KEY,
         tree_id UUID REFERENCES trees(tree_id) ON DELETE CASCADE,
         partner_1_id UUID REFERENCES individuals(person_id) ON DELETE CASCADE,
         partner_2_id UUID REFERENCES individuals(person_id) ON DELETE CASCADE,
@@ -32,7 +33,7 @@ pool.query(`
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 `).then(() => console.log('טבלת הזוגות מוכנה!'))
-  .catch(err => console.error(err));
+  .catch(err => console.error('שגיאת אתחול:', err));
 
 app.get('/api/trees', async (req, res) => {
     try {
