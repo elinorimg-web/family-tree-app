@@ -7,8 +7,8 @@
 </head>
 <body>
 <div class="container">
-    <h1>🌳 ניהול אילנות יוחסין (ללא הגבלה)</h1>
-    <div class="box">
+    <h1 class="no-print">🌳 ניהול אילנות יוחסין (ללא הגבלה)</h1>
+    <div class="box no-print">
         <h2>1. בחירה או יצירת אילן חדש</h2>
         <div style="display: flex; gap: 10px; align-items: center;">
             <select id="treeSelect" style="flex: 1; font-weight: bold;">
@@ -25,7 +25,7 @@
     </div>
 
     <div id="workspace" style="display:none;">
-        <div class="box" id="personFormBox">
+        <div class="box no-print" id="personFormBox">
             <h2 id="formTitle">2. הוספת אדם לאילן</h2>
 
             <div id="existingPersonBox" style="display:none; background:#eff6ff; border:1px solid #bfdbfe; padding:12px; border-radius:8px; margin-bottom:15px;">
@@ -48,10 +48,10 @@
                         <option value="unknown">לא ידוע</option>
                     </select><br>
                     <input type="text" id="occupation" placeholder="עיסוק עיקרי" style="width:94%"><br>
-                </div>
-                <div>
                     <input type="text" id="birthApprox" placeholder="שנת/תאריך לידה" style="width:94%"><br>
                     <input type="text" id="birthPlace" placeholder="מקום לידה" style="width:94%"><br>
+                </div>
+                <div>
                     <label class="checkbox-row">
                         <input type="checkbox" id="isDeceased">
                         <span>נפטר/ה (ז״ל)</span>
@@ -59,13 +59,14 @@
                     <div id="deathFieldContainer" style="display:none; padding-right:15px; border-right:2px solid #cbd5e1;">
                         <select id="deathType" style="width:96%">
                             <option value="regular">פטירה רגילה (מסגרת שחורה)</option>
-                            <option value="holocaust">נספה בשואה הי״ד (מסגרת שחורה + צהובה/כתומה)</option>
+                            <option value="holocaust">נספה בשואה הי״ד (מסגרת שחורה + צהובה)</option>
                             <option value="idf">חלל צה״ל ז״ל (מסגרת שחורה + כחולה)</option>
                         </select><br>
                         <input type="text" id="deathApprox" placeholder="שנת/תאריך פטירה (אופציונלי)" style="width:92%"><br>
                     </div>
                     <input type="url" id="link1" placeholder="קישור 1 (ויקיפדיה / יזכור / יד ושם)" style="width:94%"><br>
                     <input type="url" id="link2" placeholder="קישור 2 נוסף" style="width:94%"><br>
+                    <textarea id="personNotes" rows="4" placeholder="סיפור חיים, הערות היסטוריות, יחידה צבאית וכו׳ (אופציונלי)" style="width:94%; resize:vertical;"></textarea><br>
                 </div>
             </div>
             <div style="display: flex; gap: 10px; margin-top: 10px;">
@@ -75,13 +76,17 @@
         </div>
 
         <div class="box">
-            <h2>🖼️ תרשים אילן היוחסין <small style="font-size: 13px; color: #64748b; font-weight: normal;">(לחצי קליק ימני על אדם להוספת/חיבור קרובים)</small></h2>
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+                <h2 id="printTreeTitle" style="margin:0;">🖼️ תרשים אילן היוחסין</h2>
+                <button type="button" class="no-print" onclick="window.print()" style="background:#0f766e;">🖨️ הדפס / שמור כ-PDF</button>
+            </div>
             <div class="tree-canvas"><div id="treeDiagram" class="tree"></div></div>
         </div>
     </div>
 </div>
 
-<div id="contextMenu" style="display:none; position:fixed; background:white; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 4px 15px rgba(0,0,0,0.15); z-index:1000; min-width:190px; overflow:hidden;">
+<!-- תפריט קליק ימני צף -->
+<div id="contextMenu" class="no-print" style="display:none; position:fixed; background:white; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 4px 15px rgba(0,0,0,0.15); z-index:1000; min-width:205px; overflow:hidden;">
     <div style="background:#f1f5f9; padding:8px 12px; font-size:12px; font-weight:bold; color:#475569; border-bottom:1px solid #e2e8f0;" id="ctxHeader">הוספת/חיבור קרוב</div>
     <div class="ctx-item" onclick="startRelativeAdd('spouse_married')">💍 הוסף/חבר בן/בת זוג (נשואים)</div>
     <div class="ctx-item" onclick="startRelativeAdd('spouse_divorced')">💔 הוסף/חבר גרוש/ה (קו מקווקו)</div>
@@ -91,6 +96,25 @@
     <div class="ctx-item" onclick="startRelativeAdd('sister')">👧 הוסף/חבר אחות</div>
     <div class="ctx-item" onclick="startRelativeAdd('son')">👶 הוסף/חבר בן</div>
     <div class="ctx-item" onclick="startRelativeAdd('daughter')">👧 הוסף/חבר בת</div>
+    <div class="ctx-item" style="color:#dc2626; background:#fef2f2;" onclick="openDisconnectModal()">✂️ נתק קשרים (זוגיות / הורים)</div>
+</div>
+
+<!-- חלונית סיפור חיים -->
+<div id="bioModal" class="modal-backdrop no-print" onclick="if(event.target===this) this.style.display='none'">
+    <div class="modal-box">
+        <h3 id="bioTitle" style="margin-top:0; color:#1a56db;"></h3>
+        <div id="bioContent" style="white-space:pre-wrap; line-height:1.6; color:#1e293b; background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0;"></div>
+        <button type="button" onclick="document.getElementById('bioModal').style.display='none'" style="margin-top:15px;">סגור</button>
+    </div>
+</div>
+
+<!-- חלונית ניתוק קשרים -->
+<div id="disconnectModal" class="modal-backdrop no-print" onclick="if(event.target===this) this.style.display='none'">
+    <div class="modal-box">
+        <h3 id="discTitle" style="margin-top:0; color:#dc2626;"></h3>
+        <div id="discList"></div>
+        <button type="button" onclick="document.getElementById('disconnectModal').style.display='none'" style="margin-top:15px; background:#64748b;">סגור</button>
+    </div>
 </div>
 
 <script src="ui.js"></script>
