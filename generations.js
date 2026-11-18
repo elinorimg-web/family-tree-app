@@ -8,7 +8,9 @@ function computeExactGenerations(people, relationships, unionsList) {
     const gen = {};
     people.forEach(p => gen[p.person_id] = 0);
 
-    for (let i = 0; i < people.length * 4; i++) {
+    const maxIterations = Math.max(people.length * 10, 100);
+
+    for (let i = 0; i < maxIterations; i++) {
         let changed = false;
         validRels.forEach(r => {
             if (gen[r.child_id] <= gen[r.parent_id]) {
@@ -27,7 +29,7 @@ function computeExactGenerations(people, relationships, unionsList) {
         if (!changed) break;
     }
 
-    for (let i = 0; i < people.length * 2; i++) {
+    for (let i = 0; i < maxIterations; i++) {
         let pulled = false;
         people.forEach(p => {
             const pid = p.person_id;
@@ -56,7 +58,6 @@ function computeExactGenerations(people, relationships, unionsList) {
     const minAutoG = Math.min(...Object.values(gen));
     Object.keys(gen).forEach(id => { gen[id] -= minAutoG; });
 
-    // החלת דור ידני קבוע ללא הזזת שאר האילן
     people.forEach(p => {
         if (p.manual_gen !== null && p.manual_gen !== undefined) {
             gen[p.person_id] = Math.max(0, Number(p.manual_gen));
