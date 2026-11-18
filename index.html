@@ -79,7 +79,11 @@
         <div class="box">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
                 <h2 id="printTreeTitle" style="margin:0;">🖼️ תרשים אילן היוחסין</h2>
-                <button type="button" class="no-print" onclick="window.print()" style="background:#0f766e;">🖨️ הדפס / שמור כ-PDF</button>
+                <div class="no-print" style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <button type="button" id="btnViewStepped" onclick="setViewMode('stepped')" style="background:#1a56db;">📐 תצוגה מדורגת</button>
+                    <button type="button" id="btnViewClassic" onclick="setViewMode('classic')" style="background:#64748b;">🌳 תצוגה קלאסית</button>
+                    <button type="button" onclick="window.print()" style="background:#0f766e;">🖨️ הדפס / PDF</button>
+                </div>
             </div>
             <div class="tree-canvas"><div id="treeDiagram" class="tree"></div></div>
         </div>
@@ -119,6 +123,7 @@
 </div>
 
 <script src="ui.js"></script>
+<script src="stepped.js"></script>
 <script src="relations.js"></script>
 <script src="app.js"></script>
 </body>
