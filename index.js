@@ -22,7 +22,8 @@ pool.query(`
     ADD COLUMN IF NOT EXISTS link_1 TEXT,
     ADD COLUMN IF NOT EXISTS link_2 TEXT,
     ADD COLUMN IF NOT EXISTS death_type VARCHAR(30) DEFAULT 'regular',
-    ADD COLUMN IF NOT EXISTS notes TEXT;
+    ADD COLUMN IF NOT EXISTS notes TEXT,
+    ADD COLUMN IF NOT EXISTS manual_gen INTEGER;
 
     CREATE TABLE IF NOT EXISTS unions (
         union_id SERIAL PRIMARY KEY,
@@ -102,6 +103,13 @@ app.put('/api/individuals/:personId', async (req, res) => {
             [first_name, last_name, maiden_name || null, gender || 'unknown', occupation || null, birth_date_approx, birth_place, is_living !== false, death_type || 'regular', death_date_approx || null, link_1 || null, link_2 || null, notes || null, personId]
         );
         res.json(result.rows.at(0));
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.patch('/api/individuals/:personId/gen', async (req, res) => {
+    try {
+        await pool.query('UPDATE individuals SET manual_gen = $1 WHERE person_id = $2', [req.body.manual_gen, req.params.personId]);
+        res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
