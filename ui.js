@@ -6,39 +6,65 @@ function formatFullName(p) {
     return [lastNames, p.first_name].filter(Boolean).join(' ').trim();
 }
 
-function showBio(personId) {
+function showPersonDetails(personId) {
     const p = currentPeopleMap[personId];
     if (!p) return;
-    document.getElementById('bioTitle').textContent = '📖 סיפור חיים: ' + formatFullName(p);
-    document.getElementById('bioContent').textContent = p.notes || '';
+
+    const isDeceased = p.is_living === false;
+    let statusText = 'בחיים';
+    if (isDeceased) {
+        if (p.death_type === 'holocaust') statusText = 'נספה בשואה (הי״ד)';
+        else if (p.death_type === 'idf') statusText = 'חלל צה״ל (ז״ל)';
+        else statusText = 'נפטר/ה (ז״ל)';
+    }
+
+    const genderLabels = { male: 'זכר', female: 'נקבה', unknown: 'לא ידוע' };
+    document.getElementById('bioTitle').textContent = formatFullName(p);
+
+    let html = '<div class="detail-line"><strong>מגדר:</strong> ' + (genderLabels[p.gender] || 'לא ידוע') + '</div>';
+    if (p.occupation) html += '<div class="detail-line"><strong>עיסוק:</strong> ' + p.occupation + '</div>';
+    if (p.birth_date_approx || p.birth_place) {
+        html += '<div class="detail-line"><strong>לידה:</strong> ' + [p.birth_date_approx, p.birth_place].filter(Boolean).join(', ') + '</div>';
+    }
+    if (isDeceased) {
+        html += '<div class="detail-line"><strong>פטירה:</strong> ' + statusText + (p.death_date_approx ? ' (' + p.death_date_approx + ')' : '') + '</div>';
+    }
+
+    if (p.link_1 || p.link_2) {
+        html += '<div class="detail-line" style="margin-top:10px;">';
+        if (p.link_1) html += '<a href="' + p.link_1 + '" target="_blank" class="ext-link">🔗 קישור 1</a>';
+        if (p.link_2) html += '<a href="' + p.link_2 + '" target="_blank" class="ext-link">🔗 קישור 2</a>';
+        html += '</div>';
+    }
+
+    if (p.notes) {
+        html += '<div style="margin-top:12px;"><strong>📖 סיפור חיים והערות:</strong>' +
+            '<div style="margin-top:6px; white-space:pre-wrap; background:#ffffff; padding:10px; border-radius:6px; border:1px solid #cbd5e1;">' + p.notes + '</div></div>';
+    }
+
+    html += '<div style="margin-top:16px; padding-top:12px; border-top:1px solid #cbd5e1; display:flex; gap:10px;">' +
+        '<button type="button" onclick="document.getElementById(\'bioModal\').style.display=\'none\'; startEditPerson(\'' + p.person_id + '\');" style="background:#475569;">✏️ ערוך פרטים</button>' +
+        '<button type="button" onclick="document.getElementById(\'bioModal\').style.display=\'none\'; deletePerson(\'' + p.person_id + '\');" style="background:#dc2626;">🗑️ מחק אדם</button>' +
+    '</div>';
+
+    const contentEl = document.getElementById('bioContent');
+    contentEl.style.whiteSpace = 'normal';
+    contentEl.innerHTML = html;
     document.getElementById('bioModal').style.display = 'flex';
 }
 
 function buildPersonCardHTML(p, x, y) {
     const isDeceased = p.is_living === false;
     let statusClass = '';
-    let suffix = '';
     if (isDeceased) {
-        if (p.death_type === 'holocaust') { statusClass = 'holocaust'; suffix = ' (הי״ד)'; }
-        else if (p.death_type === 'idf') { statusClass = 'idf'; suffix = ' (חלל צה״ל ז״ל)'; }
-        else { statusClass = 'deceased'; suffix = ' (ז״ל)'; }
+        if (p.death_type === 'holocaust') statusClass = 'holocaust';
+        else if (p.death_type === 'idf') statusClass = 'idf';
+        else statusClass = 'deceased';
     }
-    let dates = p.birth_date_approx || '';
-    if (isDeceased) dates += p.death_date_approx ? ' - ' + p.death_date_approx : ' - נפטר/ה';
-    let linksHtml = '';
-    if (p.link_1) linksHtml += '<a href="' + p.link_1 + '" target="_blank" class="ext-link">🔗 קישור 1</a>';
-    if (p.link_2) linksHtml += '<a href="' + p.link_2 + '" target="_blank" class="ext-link">🔗 קישור 2</a>';
-    if (p.notes) linksHtml += '<button type="button" onclick="showBio(\'' + p.person_id + '\')" class="ext-link no-print" style="background:#fef3c7; color:#92400e;">📖 סיפור חיים</button>';
 
-    const actionsHtml = '<div class="card-actions" style="margin-top:6px;border-top:1px solid #cbd5e1;padding-top:4px;display:flex;justify-content:center;gap:6px;">' +
-        '<button type="button" onclick="startEditPerson(\'' + p.person_id + '\')" style="padding:2px 6px;font-size:10px;background:#475569;">✏️ ערוך</button>' +
-        '<button type="button" onclick="deletePerson(\'' + p.person_id + '\')" style="padding:2px 6px;font-size:10px;background:#dc2626;">🗑️ מחק</button></div>';
-
-    return '<div oncontextmenu="openContextMenu(event, \'' + p.person_id + '\')" class="node-card ' + (p.gender === 'female' ? 'female' : '') + ' ' + statusClass + '" style="left:' + x + 'px; top:' + y + 'px; z-index:2;">' +
-        '<div class="node-name">' + formatFullName(p) + suffix + '</div>' +
-        (p.occupation ? '<div class="node-occ">' + p.occupation + '</div>' : '') +
-        (dates || p.birth_place ? '<div class="node-dates">' + dates + (p.birth_place ? ' (' + p.birth_place + ')' : '') + '</div>' : '') +
-        (linksHtml ? '<div class="node-links">' + linksHtml + '</div>' : '') + actionsHtml + '</div>';
+    return '<div onclick="showPersonDetails(\'' + p.person_id + '\')" oncontextmenu="openContextMenu(event, \'' + p.person_id + '\')" class="node-card ' + (p.gender === 'female' ? 'female' : '') + ' ' + statusClass + '" style="left:' + x + 'px; top:' + y + 'px;" title="קליק שמאלי לפרטים מלאים | קליק ימני להוספת קרובים">' +
+        '<div class="node-name">' + formatFullName(p) + '</div>' +
+    '</div>';
 }
 
 function drawExactTree(peopleMap, relationships, unionsList) {
@@ -71,7 +97,7 @@ function drawExactTree(peopleMap, relationships, unionsList) {
         if (!parentsByChild[r.child_id].includes(r.parent_id)) parentsByChild[r.child_id].push(r.parent_id);
     });
 
-    const cardW = 170, cardH = 145, gapX = 85, gapY = 110;
+    const cardW = 165, cardH = 58, gapX = 70, gapY = 85;
     const pos = {};
     let maxW = 600;
     const globalPlaced = new Set();
@@ -137,11 +163,10 @@ function drawExactTree(peopleMap, relationships, unionsList) {
             svg += '<line x1="' + (x1 + 6) + '" y1="' + y + '" x2="' + (x2 - 6) + '" y2="' + y + '" stroke="#000000" stroke-width="3" stroke-dasharray="6,6"/>';
         } else {
             svg += '<line x1="' + x1 + '" y1="' + y + '" x2="' + x2 + '" y2="' + y + '" stroke="#000000" stroke-width="3"/>';
-            svg += '<text x="' + midX + '" y="' + (y - 10) + '" text-anchor="middle" font-size="16">💍</text>';
+            svg += '<text x="' + midX + '" y="' + (y - 8) + '" text-anchor="middle" font-size="15">💍</text>';
         }
     });
 
-    // קיבוץ ילדים לפי ההורים המדויקים שלהם עם עקומות Bezier נפרדות לכל ענף משפחתי
     const familyGroups = {};
     Object.keys(parentsByChild).forEach(childId => {
         if (!pos[childId]) return;
@@ -168,10 +193,9 @@ function drawExactTree(peopleMap, relationships, unionsList) {
             startY = p1.y + cardH;
         }
 
-        // נקודת פיצול אנכית קטנה מתחת להורה/זוג
-        const forkY = (pIds.length >= 2 ? (pos[pIds.at(0)].y + cardH) : startY) + 16;
+        const forkY = (pIds.length >= 2 ? (pos[pIds.at(0)].y + cardH) : startY) + 14;
         svg += '<line x1="' + startX + '" y1="' + startY + '" x2="' + startX + '" y2="' + forkY + '" stroke="' + color + '" stroke-width="2.5"/>';
-        svg += '<circle cx="' + startX + '" cy="' + forkY + '" r="4" fill="' + color + '"/>';
+        svg += '<circle cx="' + startX + '" cy="' + forkY + '" r="3.5" fill="' + color + '"/>';
 
         group.children.forEach(childId => {
             const cPos = pos[childId];
@@ -184,6 +208,3 @@ function drawExactTree(peopleMap, relationships, unionsList) {
     });
 
     svg += '</svg>';
-    let cardsHtml = people.filter(p => pos[p.person_id]).map(p => buildPersonCardHTML(p, pos[p.person_id].x, pos[p.person_id].y)).join('');
-    return '<div class="svg-board" style="width:' + maxW + 'px; height:' + totalH + 'px;">' + svg + cardsHtml + '</div>';
-}
