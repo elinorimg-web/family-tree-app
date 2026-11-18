@@ -63,6 +63,64 @@ function buildPersonCardHTML(p, x, y) {
         '<div class="node-name">' + formatFullName(p) + '</div></div>';
 }
 
+function computeExactGenerations(people, relationships, unionsList) {
+    const gen = {};
+    people.forEach(p => gen[p.person_id] = 0);
+
+    for (let step = 0; step < people.length * 2 + 4; step++) {
+        let changed = false;
+        relationships.forEach(r => {
+            if (gen[r.parent_id] !== undefined && gen[r.child_id] !== undefined) {
+                if (gen[r.child_id] <= gen[r.parent_id]) {
+                    gen[r.child_id] = gen[r.parent_id] + 1;
+                    changed = true;
+                }
+            }
+        });
+        unionsList.forEach(u => {
+            const g1 = gen[u.partner_1_id], g2 = gen[u.partner_2_id];
+            if (g1 !== undefined && g2 !== undefined && g1 !== g2) {
+                const maxG = Math.max(g1, g2);
+                gen[u.partner_1_id] = maxG;
+                gen[u.partner_2_id] = maxG;
+                changed = true;
+            }
+        });
+        if (!changed) break;
+    }
+
+    // משיכת הורים שאין להם הורים כלפי מטה כך שישבו בדיוק דור אחד מעל ילדיהם
+    for (let step = 0; step < people.length + 2; step++) {
+        let pulled = false;
+        people.forEach(p => {
+            const pid = p.person_id;
+            const hasParents = relationships.some(r => r.child_id === pid && gen[r.parent_id] !== undefined);
+            if (hasParents) return;
+            const myKids = relationships.filter(r => r.parent_id === pid && gen[r.child_id] !== undefined).map(r => r.child_id);
+            if (myKids.length > 0) {
+                const minChildGen = Math.min(...myKids.map(cid => gen[cid]));
+                if (gen[pid] < minChildGen - 1) {
+                    gen[pid] = minChildGen - 1;
+                    pulled = true;
+                }
+            }
+        });
+        unionsList.forEach(u => {
+            const g1 = gen[u.partner_1_id], g2 = gen[u.partner_2_id];
+            if (g1 !== undefined && g2 !== undefined && g1 !== g2) {
+                const maxG = Math.max(g1, g2);
+                gen[u.partner_1_id] = maxG;
+                gen[u.partner_2_id] = maxG;
+            }
+        });
+        if (!pulled) break;
+    }
+
+    const minG = Math.min(...Object.values(gen));
+    Object.keys(gen).forEach(id => { gen[id] -= minG; });
+    return gen;
+}
+
 function drawExactTree(allPeopleMap, relationships, unionsList) {
     const peopleMap = (focusedPersonId && allPeopleMap[focusedPersonId])
         ? getBranchSubset(focusedPersonId, allPeopleMap, relationships, unionsList)
@@ -71,23 +129,7 @@ function drawExactTree(allPeopleMap, relationships, unionsList) {
     const people = Object.values(peopleMap);
     if (people.length === 0) return '<p style="direction:rtl;">אין אנשים להצגה.</p>';
 
-    const gen = {};
-    people.forEach(p => gen[p.person_id] = 0);
-    for (let step = 0; step < people.length + 2; step++) {
-        relationships.forEach(r => {
-            if (gen[r.parent_id] !== undefined && gen[r.child_id] !== undefined && gen[r.child_id] <= gen[r.parent_id]) {
-                gen[r.child_id] = gen[r.parent_id] + 1;
-            }
-        });
-        unionsList.forEach(u => {
-            const g1 = gen[u.partner_1_id], g2 = gen[u.partner_2_id];
-            if (g1 !== undefined && g2 !== undefined && g1 !== g2) {
-                const maxG = Math.max(g1, g2);
-                gen[u.partner_1_id] = maxG; gen[u.partner_2_id] = maxG;
-            }
-        });
-    }
-
+    const gen = computeExactGenerations(people, relationships, unionsList);
     const byGen = {};
     people.forEach(p => { const g = gen[p.person_id]; if (!byGen[g]) byGen[g] = []; byGen[g].push(p.person_id); });
 
@@ -98,9 +140,9 @@ function drawExactTree(allPeopleMap, relationships, unionsList) {
         if (!parentsByChild[r.child_id].includes(r.parent_id)) parentsByChild[r.child_id].push(r.parent_id);
     });
 
-    const cardW = 165, cardH = 58, gapX = 75, gapY = 115;
+    const cardW = 165, cardH = 58, gapX = 75, rowStepY = 185, labelW = 95;
     const pos = {};
-    let maxW = 600;
+    let maxW = 720;
     const globalPlaced = new Set();
 
     function getAnchorX(childId) {
@@ -110,7 +152,9 @@ function drawExactTree(allPeopleMap, relationships, unionsList) {
         return pos[pIds.at(0)].x + cardW / 2;
     }
 
-    Object.keys(byGen).sort((a, b) => a - b).forEach(g => {
+    const genKeys = Object.keys(byGen).map(Number).sort((a, b) => a - b);
+
+    genKeys.forEach((g, rowIdx) => {
         const ids = byGen[g];
         const ordered = [];
         const sortedIds = [...ids].sort((a, b) => {
@@ -130,13 +174,27 @@ function drawExactTree(allPeopleMap, relationships, unionsList) {
         });
 
         const rowW = ordered.length * cardW + (ordered.length - 1) * gapX;
-        if (rowW + 80 > maxW) maxW = rowW + 80;
-        ordered.forEach((id, idx) => { pos[id] = { x: 40 + idx * (cardW + gapX), y: 20 + g * (cardH + gapY), rowW }; });
+        if (rowW + labelW + 100 > maxW) maxW = rowW + labelW + 100;
+        ordered.forEach((id, idx) => {
+            pos[id] = { x: 40 + idx * (cardW + gapX), y: 24 + rowIdx * rowStepY, rowW };
+        });
     });
 
-    Object.values(pos).forEach(p => { p.x += (maxW - p.rowW - 80) / 2; });
-    const totalH = (Object.keys(byGen).length) * (cardH + gapY) + 40;
+    const contentAreaW = maxW - labelW - 40;
+    Object.values(pos).forEach(p => { p.x += (contentAreaW - p.rowW) / 2; });
+    const totalH = genKeys.length * rowStepY + 20;
+
+    // יצירת רצועות רקע ותוויות ברורות לכל דור
+    let bandsHtml = '';
+    genKeys.forEach((g, rowIdx) => {
+        const bandTop = rowIdx * rowStepY;
+        const bg = rowIdx % 2 === 0 ? '#f8fafc' : '#ffffff';
+        bandsHtml += '<div class="gen-band" style="top:' + bandTop + 'px; height:' + rowStepY + 'px; width:' + maxW + 'px; background:' + bg + ';">' +
+            '<div class="gen-label">דור ' + (rowIdx + 1) + '</div>' +
+        '</div>';
+    });
+
     const svg = renderTreeSvg(maxW, totalH, pos, cardW, cardH, unionsList, parentsByChild);
     const cardsHtml = people.filter(p => pos[p.person_id]).map(p => buildPersonCardHTML(p, pos[p.person_id].x, pos[p.person_id].y)).join('');
-    return '<div class="svg-board" style="width:' + maxW + 'px; height:' + totalH + 'px;">' + svg + cardsHtml + '</div>';
+    return '<div class="svg-board" style="width:' + maxW + 'px; height:' + totalH + 'px;">' + bandsHtml + svg + cardsHtml + '</div>';
 }
