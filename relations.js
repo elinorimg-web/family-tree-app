@@ -14,12 +14,23 @@ async function movePersonGeneration(delta) {
     const p = currentPeopleMap[pid];
     if (!p) return;
     const currentGen = lastComputedGen[pid] !== undefined ? lastComputedGen[pid] : 0;
-    const nextGen = delta === 0 ? null : currentGen + delta;
+    const nextGen = delta === 0 ? null : Math.max(0, currentGen + delta);
     await fetch('/api/individuals/' + pid + '/gen', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ manual_gen: nextGen })
     });
+    loadTreeData();
+}
+
+async function setDirectGeneration(pid, val) {
+    const nextGen = val === '' ? null : Number(val);
+    await fetch('/api/individuals/' + pid + '/gen', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ manual_gen: nextGen })
+    });
+    document.getElementById('bioModal').style.display = 'none';
     loadTreeData();
 }
 
