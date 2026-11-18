@@ -64,23 +64,25 @@ function buildPersonCardHTML(p, x, y) {
 }
 
 function computeExactGenerations(people, relationships, unionsList) {
+    const ids = new Set(people.map(p => p.person_id));
+    const validRels = relationships.filter(r => ids.has(r.parent_id) && ids.has(r.child_id));
+    const validUnions = unionsList.filter(u => ids.has(u.partner_1_id) && ids.has(u.partner_2_id));
+
     const gen = {};
     people.forEach(p => gen[p.person_id] = 0);
 
-    for (let step = 0; step < people.length * 2 + 4; step++) {
+    // שלב 1: כל ילד חייב להיות לפחות דור אחד מתחת לכל הוריו
+    for (let i = 0; i < people.length * 3; i++) {
         let changed = false;
-        relationships.forEach(r => {
-            if (gen[r.parent_id] !== undefined && gen[r.child_id] !== undefined) {
-                if (gen[r.child_id] <= gen[r.parent_id]) {
-                    gen[r.child_id] = gen[r.parent_id] + 1;
-                    changed = true;
-                }
+        validRels.forEach(r => {
+            if (gen[r.child_id] < gen[r.parent_id] + 1) {
+                gen[r.child_id] = gen[r.parent_id] + 1;
+                changed = true;
             }
         });
-        unionsList.forEach(u => {
-            const g1 = gen[u.partner_1_id], g2 = gen[u.partner_2_id];
-            if (g1 !== undefined && g2 !== undefined && g1 !== g2) {
-                const maxG = Math.max(g1, g2);
+        validUnions.forEach(u => {
+            const maxG = Math.max(gen[u.partner_1_id], gen[u.partner_2_id]);
+            if (gen[u.partner_1_id] !== maxG || gen[u.partner_2_id] !== maxG) {
                 gen[u.partner_1_id] = maxG;
                 gen[u.partner_2_id] = maxG;
                 changed = true;
@@ -89,31 +91,39 @@ function computeExactGenerations(people, relationships, unionsList) {
         if (!changed) break;
     }
 
-    // משיכת הורים שאין להם הורים כלפי מטה כך שישבו בדיוק דור אחד מעל ילדיהם
-    for (let step = 0; step < people.length + 2; step++) {
-        let pulled = false;
+    // שלב 2: הורים ללא הורים משלהם מתמקמים בדיוק דור אחד מעל הילד הגבוה ביותר שלהם
+    for (let i = 0; i < people.length * 2; i++) {
+        let adjusted = false;
         people.forEach(p => {
             const pid = p.person_id;
-            const hasParents = relationships.some(r => r.child_id === pid && gen[r.parent_id] !== undefined);
+            const hasParents = validRels.some(r => r.child_id === pid);
             if (hasParents) return;
-            const myKids = relationships.filter(r => r.parent_id === pid && gen[r.child_id] !== undefined).map(r => r.child_id);
-            if (myKids.length > 0) {
-                const minChildGen = Math.min(...myKids.map(cid => gen[cid]));
-                if (gen[pid] < minChildGen - 1) {
-                    gen[pid] = minChildGen - 1;
-                    pulled = true;
+
+            const childrenGens = validRels.filter(r => r.parent_id === pid).map(r => gen[r.child_id]);
+            if (childrenGens.length > 0) {
+                const targetParentGen = Math.min(...childrenGens) - 1;
+                if (gen[pid] < targetParentGen) {
+                    gen[pid] = targetParentGen;
+                    adjusted = true;
                 }
             }
         });
-        unionsList.forEach(u => {
-            const g1 = gen[u.partner_1_id], g2 = gen[u.partner_2_id];
-            if (g1 !== undefined && g2 !== undefined && g1 !== g2) {
-                const maxG = Math.max(g1, g2);
+        validUnions.forEach(u => {
+            const maxG = Math.max(gen[u.partner_1_id], gen[u.partner_2_id]);
+            if (gen[u.partner_1_id] !== maxG || gen[u.partner_2_id] !== maxG) {
                 gen[u.partner_1_id] = maxG;
                 gen[u.partner_2_id] = maxG;
+                adjusted = true;
             }
         });
-        if (!pulled) break;
+        // וידוא שאחרי יישור בני זוג, אף ילד לא נשאר באותו דור כמו הורהו
+        validRels.forEach(r => {
+            if (gen[r.child_id] < gen[r.parent_id] + 1) {
+                gen[r.child_id] = gen[r.parent_id] + 1;
+                adjusted = true;
+            }
+        });
+        if (!adjusted) break;
     }
 
     const minG = Math.min(...Object.values(gen));
@@ -184,7 +194,6 @@ function drawExactTree(allPeopleMap, relationships, unionsList) {
     Object.values(pos).forEach(p => { p.x += (contentAreaW - p.rowW) / 2; });
     const totalH = genKeys.length * rowStepY + 20;
 
-    // יצירת רצועות רקע ותוויות ברורות לכל דור
     let bandsHtml = '';
     genKeys.forEach((g, rowIdx) => {
         const bandTop = rowIdx * rowStepY;
