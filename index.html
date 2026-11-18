@@ -79,15 +79,20 @@
         <div class="box">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
                 <h2 id="printTreeTitle" style="margin:0;">🖼️ תרשים אילן היוחסין</h2>
-                <button type="button" class="no-print" onclick="window.print()" style="background:#0f766e;">🖨️ הדפס / שמור כ-PDF</button>
+                <div class="no-print" style="display:flex; gap:8px; align-items:center;">
+                    <button type="button" id="btnResetFocus" onclick="resetBranchFocus()" style="background:#d97706; display:none;">🌐 הצג את כל האילן</button>
+                    <button type="button" onclick="window.print()" style="background:#0f766e;">🖨️ הדפס / שמור כ-PDF</button>
+                </div>
             </div>
+            <div style="font-size:12px; color:#64748b; margin-bottom:8px;" class="no-print">💡 טיפ: העבירי עכבר מעל אדם להדגשת קשריו הישירים, או לחצי קליק ימני להתמקדות בענף שלו בלבד.</div>
             <div class="tree-canvas"><div id="treeDiagram" class="tree"></div></div>
         </div>
     </div>
 </div>
 
-<div id="contextMenu" class="no-print" style="display:none; position:fixed; background:white; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 4px 15px rgba(0,0,0,0.15); z-index:1000; min-width:205px; overflow:hidden;">
-    <div style="background:#f1f5f9; padding:8px 12px; font-size:12px; font-weight:bold; color:#475569; border-bottom:1px solid #e2e8f0;" id="ctxHeader">הוספת/חיבור קרוב</div>
+<div id="contextMenu" class="no-print" style="display:none; position:fixed; background:white; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 4px 15px rgba(0,0,0,0.15); z-index:1000; min-width:215px; overflow:hidden;">
+    <div style="background:#f1f5f9; padding:8px 12px; font-size:12px; font-weight:bold; color:#475569; border-bottom:1px solid #e2e8f0;" id="ctxHeader">פעולות</div>
+    <div class="ctx-item" style="background:#fffbeb; color:#b45309; font-weight:bold;" onclick="focusOnBranch()">🔍 התמקד בענף של אדם זה</div>
     <div class="ctx-item" onclick="startRelativeAdd('spouse_married')">💍 הוסף/חבר בן/בת זוג (נשואים)</div>
     <div class="ctx-item" onclick="startRelativeAdd('spouse_divorced')">💔 הוסף/חבר גרוש/ה (קו מקווקו)</div>
     <div class="ctx-item" onclick="startRelativeAdd('father')">👨 הוסף/חבר אבא</div>
