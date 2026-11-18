@@ -26,7 +26,7 @@ function buildSteppedCardHTML(p) {
         (linksHtml ? '<div class="node-links">' + linksHtml + '</div>' : '') + actionsHtml + '</div>';
 }
 
-function renderSteppedBranch(personId, peopleMap, childrenMap, unionsList, rendered) {
+function renderSteppedBranch(personId, peopleMap, childrenMap, parentsMap, unionsList, rendered) {
     if (rendered.has(personId) || !peopleMap[personId]) return '';
     rendered.add(personId);
     const person = peopleMap[personId];
@@ -34,47 +34,53 @@ function renderSteppedBranch(personId, peopleMap, childrenMap, unionsList, rende
     const myUnions = unionsList.filter(u => u.partner_1_id === personId || u.partner_2_id === personId);
     const personKids = childrenMap[personId] || [];
 
-    let rowHtml = '<div class="step-row">' + buildSteppedCardHTML(person);
-    let branchesHtml = '';
-
-    // טיפול בכל בן/בת זוג (נשואים או גרושים) וילדיהם המשותפים
-    const handledKids = new Set();
-
-    myUnions.forEach(u => {
-        const spouseId = u.partner_1_id === personId ? u.partner_2_id : u.partner_1_id;
-        const spouse = peopleMap[spouseId];
-        if (!spouse) return;
-        rendered.add(spouseId);
-
-        const isDiv = u.union_status === 'divorced';
-        if (isDiv) {
-            rowHtml += '<div class="step-divorced-line" title="גרושים"></div>' + buildSteppedCardHTML(spouse);
-        } else {
-            rowHtml += '<div class="step-married-join">💍</div>' + buildSteppedCardHTML(spouse);
-        }
-
-        const spouseKids = childrenMap[spouseId] || [];
-        const shared = personKids.filter(cid => spouseKids.includes(cid) && !rendered.has(cid));
-        shared.forEach(cid => handledKids.add(cid));
-
-        if (shared.length > 0) {
-            branchesHtml += '<div class="step-children">' +
-                shared.map(cid => '<div class="step-child-item">' + renderSteppedBranch(cid, peopleMap, childrenMap, unionsList, rendered) + '</div>').join('') +
+    // אם אין בני זוג - מציגים כרטיס בודד ומתחתיו ילדים (אם יש)
+    if (myUnions.length === 0) {
+        const kids = personKids.filter(cid => !rendered.has(cid));
+        let html = '<div class="step-node"><div class="step-row">' + buildSteppedCardHTML(person) + '</div>';
+        if (kids.length > 0) {
+            html += '<div class="step-children single-parent">' +
+                kids.map(cid => '<div class="step-child-item">' + renderSteppedBranch(cid, peopleMap, childrenMap, parentsMap, unionsList, rendered) + '</div>').join('') +
             '</div>';
         }
-    });
-
-    rowHtml += '</div>';
-
-    // ילדים של האדם ללא בן זוג משותף
-    const soloKids = personKids.filter(cid => !handledKids.has(cid) && !rendered.has(cid));
-    if (soloKids.length > 0) {
-        branchesHtml += '<div class="step-children">' +
-            soloKids.map(cid => '<div class="step-child-item">' + renderSteppedBranch(cid, peopleMap, childrenMap, unionsList, rendered) + '</div>').join('') +
-        '</div>';
+        return html + '</div>';
     }
 
-    return '<div class="step-node">' + rowHtml + branchesHtml + '</div>';
+    // סידור זוגיות: גרושים קודם, נשואים אחריהם
+    const sortedUnions = [...myUnions].sort((a, b) => (a.union_status === 'divorced' ? -1 : 1));
+    let fullHtml = '';
+
+    sortedUnions.forEach((u, idx) => {
+        const spouseId = u.partner_1_id === personId ? u.partner_2_id : u.partner_1_id;
+        const spouse = peopleMap[spouseId];
+        if (spouse) rendered.add(spouseId);
+
+        const isDiv = u.union_status === 'divorced';
+        const joinHtml = isDiv ? '<div class="step-divorced-line" title="גרושים"></div>' : '<div class="step-married-join">💍</div>';
+
+        const spouseKids = spouse ? (childrenMap[spouseId] || []) : [];
+        let branchKids = personKids.filter(cid => spouseKids.includes(cid));
+
+        // בזוגיות האחרונה נצרף גם ילדים שרשומים רק על האדם עצמו ללא הורה שני
+        if (idx === sortedUnions.length - 1) {
+            const soloKids = personKids.filter(cid => (parentsMap[cid] || []).length === 1);
+            soloKids.forEach(cid => { if (!branchKids.includes(cid)) branchKids.push(cid); });
+        }
+        branchKids = branchKids.filter(cid => !rendered.has(cid));
+
+        fullHtml += '<div class="step-node"><div class="step-row">' +
+            buildSteppedCardHTML(person) + (spouse ? joinHtml + buildSteppedCardHTML(spouse) : '') +
+        '</div>';
+
+        if (branchKids.length > 0) {
+            fullHtml += '<div class="step-children">' +
+                branchKids.map(cid => '<div class="step-child-item">' + renderSteppedBranch(cid, peopleMap, childrenMap, parentsMap, unionsList, rendered) + '</div>').join('') +
+            '</div>';
+        }
+        fullHtml += '</div>';
+    });
+
+    return fullHtml;
 }
 
 function drawSteppedTree(peopleMap, relationships, unionsList) {
@@ -82,31 +88,38 @@ function drawSteppedTree(peopleMap, relationships, unionsList) {
     if (people.length === 0) return '<p>אין אנשים באילן.</p>';
 
     const childrenMap = {};
-    const hasParent = new Set();
-    people.forEach(p => { childrenMap[p.person_id] = []; });
+    const parentsMap = {};
+    people.forEach(p => { childrenMap[p.person_id] = []; parentsMap[p.person_id] = []; });
+
     relationships.forEach(r => {
         if (childrenMap[r.parent_id] && !childrenMap[r.parent_id].includes(r.child_id)) {
             childrenMap[r.parent_id].push(r.child_id);
-            hasParent.add(r.child_id);
+        }
+        if (parentsMap[r.child_id] && !parentsMap[r.child_id].includes(r.parent_id)) {
+            parentsMap[r.child_id].push(r.parent_id);
         }
     });
 
     const rendered = new Set();
-    const roots = people.filter(p => !hasParent.has(p.person_id));
-    let html = '<div class="stepped-container">';
-
-    roots.forEach(r => {
-        if (rendered.has(r.person_id)) return;
-        // אם לאדם אין הורים, אבל לבן/בת זוגו יש הורים - נדלג עליו כאן כדי שיצויר ליד בן זוגו בדור הנכון
-        const u = unionsList.find(un => un.partner_1_id === r.person_id || un.partner_2_id === r.person_id);
-        const spouseId = u ? (u.partner_1_id === r.person_id ? u.partner_2_id : u.partner_1_id) : null;
-        if (spouseId && hasParent.has(spouseId)) return;
-        html += renderSteppedBranch(r.person_id, peopleMap, childrenMap, unionsList, rendered);
+    const roots = people.filter(p => {
+        if ((parentsMap[p.person_id] || []).length > 0) return false;
+        const myUnions = unionsList.filter(u => u.partner_1_id === p.person_id || u.partner_2_id === p.person_id);
+        const spouseHasParents = myUnions.some(u => {
+            const sid = u.partner_1_id === p.person_id ? u.partner_2_id : u.partner_1_id;
+            return (parentsMap[sid] || []).length > 0;
+        });
+        return !spouseHasParents;
     });
 
+    let html = '<div class="stepped-container">';
+    roots.forEach(r => {
+        if (!rendered.has(r.person_id)) {
+            html += renderSteppedBranch(r.person_id, peopleMap, childrenMap, parentsMap, unionsList, rendered);
+        }
+    });
     people.forEach(p => {
         if (!rendered.has(p.person_id)) {
-            html += renderSteppedBranch(p.person_id, peopleMap, childrenMap, unionsList, rendered);
+            html += renderSteppedBranch(p.person_id, peopleMap, childrenMap, parentsMap, unionsList, rendered);
         }
     });
 
