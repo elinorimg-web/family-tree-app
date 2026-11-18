@@ -104,6 +104,9 @@ async function loadTreeData() {
     currentTreeId = select.value;
     const deleteBtn = document.getElementById('btnDeleteTree');
     if (!currentTreeId) { document.getElementById('workspace').style.display = 'none'; deleteBtn.style.display = 'none'; return; }
+    
+    focusedPersonId = null;
+    document.getElementById('btnResetFocus').style.display = 'none';
     document.getElementById('workspace').style.display = 'block';
     deleteBtn.style.display = 'inline-block';
     document.getElementById('printTreeTitle').textContent = '🌳 אילן יוחסין: ' + select.options[select.selectedIndex].text;
