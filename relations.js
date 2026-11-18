@@ -5,8 +5,22 @@ function openContextMenu(e, personId) {
     document.getElementById('ctxHeader').textContent = 'קרובים עבור: ' + (p ? p.first_name : '');
     const menu = document.getElementById('contextMenu');
     menu.style.display = 'block';
-    menu.style.left = Math.min(e.clientX, window.innerWidth - 220) + 'px';
-    menu.style.top = e.clientY + 'px';
+    menu.style.left = Math.min(e.clientX, window.innerWidth - 230) + 'px';
+    menu.style.top = Math.min(e.clientY, window.innerHeight - 380) + 'px';
+}
+
+async function movePersonGeneration(delta) {
+    const pid = contextTargetPersonId;
+    const p = currentPeopleMap[pid];
+    if (!p) return;
+    const currentGen = lastComputedGen[pid] !== undefined ? lastComputedGen[pid] : 0;
+    const nextGen = delta === 0 ? null : currentGen + delta;
+    await fetch('/api/individuals/' + pid + '/gen', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ manual_gen: nextGen })
+    });
+    loadTreeData();
 }
 
 function startRelativeAdd(relType) {
@@ -33,8 +47,8 @@ function startRelativeAdd(relType) {
     }
 
     const labels = {
-        spouse_married: '💍 הוספת/חיבור בן/בת זוג', spouse_divorced: '💔 הוספת/חיבור גרוש/ה',
-        father: '👨 הוספת/חיבור אבא', mother: '👩 הוספת/חבר אמא',
+        spouse_married: '💍 הוספת/חיבור בן/בת זוג', spouse_divorced: '💔 הוספת/חבר גרוש/ה',
+        father: '👨 הוספת/חבר אבא', mother: '👩 הוספת/חבר אמא',
         brother: '👦 הוספת/חבר אח', sister: '👧 הוספת/חבר אחות',
         son: '👶 הוספת/חבר בן', daughter: '👧 הוספת/חבר בת'
     };
