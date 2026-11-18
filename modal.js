@@ -21,6 +21,12 @@ function showPersonDetails(personId) {
     const genderLabels = { male: 'זכר', female: 'נקבה', unknown: 'לא ידוע' };
     document.getElementById('bioTitle').textContent = formatFullName(p);
 
+    const curManual = (p.manual_gen !== null && p.manual_gen !== undefined) ? String(p.manual_gen) : '';
+    let genOptions = '<option value=""' + (curManual === '' ? ' selected' : '') + '>אוטומטי</option>';
+    for (let i = 0; i <= 7; i++) {
+        genOptions += '<option value="' + i + '"' + (curManual === String(i) ? ' selected' : '') + '>דור ' + (i + 1) + '</option>';
+    }
+
     let html = '<div class="detail-line"><strong>מגדר:</strong> ' + (genderLabels[p.gender] || 'לא ידוע') + '</div>';
     if (p.occupation) html += '<div class="detail-line"><strong>עיסוק:</strong> ' + p.occupation + '</div>';
     if (p.birth_date_approx || p.birth_place) {
@@ -29,6 +35,12 @@ function showPersonDetails(personId) {
     if (isDeceased) {
         html += '<div class="detail-line"><strong>פטירה:</strong> ' + statusText + (p.death_date_approx ? ' (' + p.death_date_approx + ')' : '') + '</div>';
     }
+
+    html += '<div class="detail-line" style="margin-top:10px; background:#eff6ff; padding:8px; border-radius:6px;">' +
+        '<strong>📍 מיקום שורת דור בתרשים:</strong> ' +
+        '<select onchange="setDirectGeneration(\'' + p.person_id + '\', this.value)" style="padding:4px 8px; margin-right:6px;">' + genOptions + '</select>' +
+    '</div>';
+
     if (p.link_1 || p.link_2) {
         html += '<div class="detail-line" style="margin-top:10px;">';
         if (p.link_1) html += '<a href="' + p.link_1 + '" target="_blank" class="ext-link">🔗 קישור 1</a>';
