@@ -15,28 +15,25 @@ function resetBranchFocus() {
 function highlightConnections(personId) {
     document.querySelectorAll('.tree-edge').forEach(el => {
         const linked = (el.dataset.nodes || '').split(',');
-        el.style.opacity = linked.includes(personId) ? '1' : '0.12';
+        el.style.opacity = linked.includes(personId) ? '1' : '0.1';
         if (linked.includes(personId)) el.setAttribute('stroke-width', '3.5');
     });
 }
 
 function clearHighlights() {
     document.querySelectorAll('.tree-edge').forEach(el => {
-        el.style.opacity = '0.85';
+        el.style.opacity = '0.9';
         el.setAttribute('stroke-width', '2.2');
     });
 }
 
 function getBranchSubset(rootId, peopleMap, relationships, unionsList) {
     const keep = new Set([rootId]);
-    // הורים של האדם
     relationships.forEach(r => { if (r.child_id === rootId) keep.add(r.parent_id); });
-    // בני זוג של האדם
     unionsList.forEach(u => {
         if (u.partner_1_id === rootId) keep.add(u.partner_2_id);
         if (u.partner_2_id === rootId) keep.add(u.partner_1_id);
     });
-    // כל הצאצאים ובני זוגם כלפי מטה
     let added = true;
     while (added) {
         added = false;
@@ -64,6 +61,27 @@ function buildPersonCardHTML(p, x, y) {
     const focusRing = p.person_id === focusedPersonId ? 'outline: 3px solid #d97706;' : '';
     return '<div onmouseenter="highlightConnections(\'' + p.person_id + '\')" onmouseleave="clearHighlights()" onclick="showPersonDetails(\'' + p.person_id + '\')" oncontextmenu="openContextMenu(event, \'' + p.person_id + '\')" class="node-card ' + (p.gender === 'female' ? 'female' : '') + ' ' + statusClass + '" style="left:' + x + 'px; top:' + y + 'px;' + focusRing + '">' +
         '<div class="node-name">' + formatFullName(p) + '</div></div>';
+}
+
+function buildHorizontalWithHops(x1, x2, y, verticalSegments) {
+    if (Math.abs(x1 - x2) < 1) return 'M ' + x1 + ' ' + y + ' ';
+    const dir = x2 > x1 ? 1 : -1;
+    const minX = Math.min(x1, x2);
+    const maxX = Math.max(x1, x2);
+    const r = 7;
+
+    const crossings = verticalSegments
+        .filter(v => v.x > minX + r && v.x < maxX - r && y > v.y1 && y < v.y2)
+        .map(v => v.x)
+        .sort((a, b) => dir === 1 ? a - b : b - a);
+
+    let d = 'M ' + x1 + ' ' + y + ' ';
+    crossings.forEach(cx => {
+        d += 'L ' + (cx - dir * r) + ' ' + y + ' ';
+        d += 'A ' + r + ' ' + r + ' 0 0 ' + (dir === 1 ? 1 : 0) + ' ' + (cx + dir * r) + ' ' + y + ' ';
+    });
+    d += 'L ' + x2 + ' ' + y + ' ';
+    return d;
 }
 
 function drawExactTree(allPeopleMap, relationships, unionsList) {
@@ -101,7 +119,7 @@ function drawExactTree(allPeopleMap, relationships, unionsList) {
         if (!parentsByChild[r.child_id].includes(r.parent_id)) parentsByChild[r.child_id].push(r.parent_id);
     });
 
-    const cardW = 165, cardH = 58, gapX = 75, gapY = 105;
+    const cardW = 165, cardH = 58, gapX = 75, gapY = 115;
     const pos = {};
     let maxW = 600;
     const globalPlaced = new Set();
@@ -166,8 +184,11 @@ function drawExactTree(allPeopleMap, relationships, unionsList) {
     });
 
     const branchColors = ['#1d4ed8', '#047857', '#b45309', '#6d28d9', '#be123c', '#0f766e'];
-    Object.values(familyGroups).forEach((group, idx) => {
-        const color = branchColors[idx % branchColors.length];
+    const groupsArr = Object.values(familyGroups);
+    const verticalSegments = [];
+
+    // איסוף כל הקווים האנכיים לצורך חישוב גשרי הקפיצה
+    groupsArr.forEach((group, idx) => {
         const pIds = group.pIds;
         let startX, startY;
         if (pIds.length >= 2) {
@@ -177,22 +198,19 @@ function drawExactTree(allPeopleMap, relationships, unionsList) {
             const p1 = pos[pIds.at(0)];
             startX = p1.x + cardW / 2; startY = p1.y + cardH;
         }
-
-        // נתיב גובה ייחודי לכל משפחה (laneY) למניעת התמזגות קווים
-        const baseTop = (pIds.length >= 2 ? (pos[pIds.at(0)].y + cardH) : startY) + 12;
-        const laneY = baseTop + (idx % 6) * 11;
-        const allNodes = [...pIds, ...group.children].join(',');
-
-        svg += '<line class="tree-edge" data-nodes="' + allNodes + '" x1="' + startX + '" y1="' + startY + '" x2="' + startX + '" y2="' + laneY + '" stroke="' + color + '" stroke-width="2.2" opacity="0.85"/>';
-        svg += '<circle cx="' + startX + '" cy="' + laneY + '" r="3.5" fill="' + color + '"/>';
-
+        const baseTop = (pIds.length >= 2 ? (pos[pIds.at(0)].y + cardH) : startY) + 14;
+        const laneY = baseTop + (idx % 6) * 13;
+        group._geom = { startX, startY, laneY };
+        verticalSegments.push({ x: startX, y1: startY, y2: laneY });
         group.children.forEach(childId => {
-            const cPos = pos[childId], endX = cPos.x + cardW / 2, endY = cPos.y;
-            const edgeNodes = [...pIds, childId].join(',');
-            svg += '<path class="tree-edge" data-nodes="' + edgeNodes + '" d="M ' + startX + ' ' + laneY + ' L ' + endX + ' ' + laneY + ' L ' + endX + ' ' + endY + '" fill="none" stroke="' + color + '" stroke-width="2.2" opacity="0.85"/>';
+            const cPos = pos[childId];
+            verticalSegments.push({ x: cPos.x + cardW / 2, y1: laneY, y2: cPos.y });
         });
     });
 
-    svg += '</svg>';
-    return '<div class="svg-board" style="width:' + maxW + 'px; height:' + totalH + 'px;">' + svg + people.filter(p => pos[p.person_id]).map(p => buildPersonCardHTML(p, pos[p.person_id].x, pos[p.person_id].y)).join('') + '</div>';
-}
+    groupsArr.forEach((group, idx) => {
+        const color = branchColors[idx % branchColors.length];
+        const { startX, startY, laneY } = group._geom;
+        const pIds = group.pIds;
+        const allNodes = [...pIds, ...group.children].join(',');
+
