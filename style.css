@@ -9,46 +9,55 @@ button:hover { background: #1e40af; }
 .checkbox-row { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-weight: bold; cursor: pointer; }
 .checkbox-row input { width: 17px; height: 17px; cursor: pointer; }
 
-.tree-canvas { overflow: auto; padding: 20px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; position: relative; min-height: 300px; direction: ltr; }
-.svg-board { position: relative; margin: 0 auto; }
+.tree-canvas { overflow: auto; padding: 20px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; position: relative; min-height: 300px; }
+.svg-board { position: relative; margin: 0 auto; direction: ltr; }
 .svg-lines { position: absolute; top: 0; left: 0; pointer-events: none; }
 
-.node-card {
-    position: absolute;
-    width: 170px;
+/* כרטיס אדם - משותף לשתי התצוגות */
+.node-card, .step-card {
+    width: 175px;
     box-sizing: border-box;
     background: #eff6ff;
     border: 2px solid #3b82f6;
-    border-radius: 10px;
+    border-radius: 8px;
     padding: 8px 10px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.06);
     text-align: center;
     direction: rtl;
-    z-index: 2;
 }
-.node-card.female { background: #fdf2f8; border-color: #ec4899; }
-.node-card.deceased { border: 4px solid #000000 !important; }
-.node-card.holocaust { border: 4px solid #000000 !important; box-shadow: inset 0 0 0 4px #f59e0b !important; }
-.node-card.idf { border: 4px solid #000000 !important; box-shadow: inset 0 0 0 4px #2563eb !important; }
+.node-card { position: absolute; z-index: 2; }
+.female { background: #fdf2f8 !important; border-color: #ec4899 !important; }
+.deceased { border: 4px solid #000000 !important; }
+.holocaust { border: 4px solid #000000 !important; box-shadow: inset 0 0 0 4px #f59e0b !important; }
+.idf { border: 4px solid #000000 !important; box-shadow: inset 0 0 0 4px #2563eb !important; }
 .node-name { font-weight: bold; font-size: 14px; color: #0f172a; }
 .node-occ { font-size: 11px; color: #475569; font-style: italic; margin-top: 2px; }
 .node-dates { font-size: 11px; color: #334155; margin-top: 3px; }
 .node-links { margin-top: 5px; display: flex; justify-content: center; gap: 4px; flex-wrap: wrap; }
 .ext-link { font-size: 10px; background: #e2e8f0; color: #1e293b; padding: 2px 6px; border-radius: 4px; text-decoration: none; font-weight: bold; border: none; cursor: pointer; }
 
+/* תצוגה אנכית מדורגת (כמו בתמונה) */
+.stepped-container { direction: rtl; text-align: right; padding: 10px; display: inline-block; min-width: 100%; }
+.step-node { margin-bottom: 16px; }
+.step-row { display: inline-flex; align-items: stretch; position: relative; }
+.step-married-join { display: flex; align-items: center; justify-content: center; width: 26px; background: #f1f5f9; border-top: 2px solid #1e293b; border-bottom: 2px solid #1e293b; font-size: 13px; }
+.step-divorced-line { width: 42px; align-self: center; border-top: 3px dashed #000000; margin: 0 4px; }
+.step-children { margin-right: 95px; position: relative; }
+.step-child-item { position: relative; padding-right: 38px; padding-top: 14px; }
+.step-child-item::before { content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 2px; background: #1e293b; }
+.step-child-item:last-child::before { bottom: auto; height: 48px; }
+.step-child-item::after { content: ''; position: absolute; right: 0; top: 48px; width: 38px; height: 2px; background: #1e293b; }
+
 .ctx-item { padding: 8px 14px; cursor: pointer; font-size: 13px; color: #1e293b; border-bottom: 1px solid #f1f5f9; direction: rtl; text-align: right; }
 .ctx-item:hover { background: #eff6ff; color: #1a56db; font-weight: bold; }
-
-/* חלונית קופצת (Modal) לסיפור חיים ולניתוק קשרים */
 .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); z-index: 2000; align-items: center; justify-content: center; }
 .modal-box { background: white; padding: 22px; border-radius: 12px; max-width: 520px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); direction: rtl; text-align: right; }
 .rel-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 1px solid #e2e8f0; }
 
-/* מצב הדפסה / שמירה כ-PDF נקי */
 @media print {
     body { background: white; padding: 0; }
     .container { box-shadow: none; padding: 0; max-width: 100%; }
     .no-print, .card-actions { display: none !important; }
     .tree-canvas { border: none; overflow: visible; padding: 0; }
-    .node-card { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .node-card, .step-card { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
