@@ -24,8 +24,10 @@ button:hover { background: #1e40af; }
     box-shadow: 0 2px 5px rgba(0,0,0,0.06);
     text-align: center;
     direction: rtl;
+    position: relative;
+    z-index: 2;
 }
-.node-card { position: absolute; z-index: 2; }
+.node-card { position: absolute; }
 .female { background: #fdf2f8 !important; border-color: #ec4899 !important; }
 .deceased { border: 4px solid #000000 !important; }
 .holocaust { border: 4px solid #000000 !important; box-shadow: inset 0 0 0 4px #f59e0b !important; }
@@ -36,17 +38,20 @@ button:hover { background: #1e40af; }
 .node-links { margin-top: 5px; display: flex; justify-content: center; gap: 4px; flex-wrap: wrap; }
 .ext-link { font-size: 10px; background: #e2e8f0; color: #1e293b; padding: 2px 6px; border-radius: 4px; text-decoration: none; font-weight: bold; border: none; cursor: pointer; }
 
-/* תצוגה אנכית מדורגת (כמו בתמונה) */
+/* תצוגה אנכית מדורגת מיושרת במדויק */
 .stepped-container { direction: rtl; text-align: right; padding: 10px; display: inline-block; min-width: 100%; }
-.step-node { margin-bottom: 16px; }
-.step-row { display: inline-flex; align-items: stretch; position: relative; }
-.step-married-join { display: flex; align-items: center; justify-content: center; width: 26px; background: #f1f5f9; border-top: 2px solid #1e293b; border-bottom: 2px solid #1e293b; font-size: 13px; }
-.step-divorced-line { width: 42px; align-self: center; border-top: 3px dashed #000000; margin: 0 4px; }
-.step-children { margin-right: 95px; position: relative; }
-.step-child-item { position: relative; padding-right: 38px; padding-top: 14px; }
-.step-child-item::before { content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 2px; background: #1e293b; }
-.step-child-item:last-child::before { bottom: auto; height: 48px; }
-.step-child-item::after { content: ''; position: absolute; right: 0; top: 48px; width: 38px; height: 2px; background: #1e293b; }
+.step-node { margin-bottom: 14px; }
+.step-row { display: inline-flex; align-items: center; position: relative; }
+.step-married-join { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; background: #ffffff; border-top: 2.5px solid #1e293b; border-bottom: 2.5px solid #1e293b; font-size: 13px; flex-shrink: 0; }
+.step-divorced-line { width: 26px; height: 0; border-top: 3px dashed #000000; flex-shrink: 0; }
+
+/* הקו האנכי יורד בדיוק מאמצע החיבור (175px + 13px = 188px) */
+.step-children { margin-right: 188px; position: relative; }
+.step-children.single-parent { margin-right: 88px; }
+.step-child-item { position: relative; padding-right: 36px; padding-top: 14px; }
+.step-child-item::before { content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 2.5px; background: #1e293b; z-index: 1; }
+.step-child-item:last-child::before { bottom: auto; height: 52px; }
+.step-child-item::after { content: ''; position: absolute; right: 0; top: 52px; width: 36px; height: 2.5px; background: #1e293b; z-index: 1; }
 
 .ctx-item { padding: 8px 14px; cursor: pointer; font-size: 13px; color: #1e293b; border-bottom: 1px solid #f1f5f9; direction: rtl; text-align: right; }
 .ctx-item:hover { background: #eff6ff; color: #1a56db; font-weight: bold; }
