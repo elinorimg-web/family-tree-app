@@ -5,6 +5,7 @@ let currentRelationships = [];
 let currentUnions = [];
 let contextTargetPersonId = null;
 let pendingRelation = null;
+let currentViewMode = 'stepped';
 
 document.addEventListener('click', () => { document.getElementById('contextMenu').style.display = 'none'; });
 
@@ -12,6 +13,22 @@ document.getElementById('isDeceased').addEventListener('change', function() {
     document.getElementById('deathFieldContainer').style.display = this.checked ? 'block' : 'none';
     if (!this.checked) { document.getElementById('deathApprox').value = ''; document.getElementById('deathType').value = 'regular'; }
 });
+
+function setViewMode(mode) {
+    currentViewMode = mode;
+    document.getElementById('btnViewStepped').style.background = mode === 'stepped' ? '#1a56db' : '#64748b';
+    document.getElementById('btnViewClassic').style.background = mode === 'classic' ? '#1a56db' : '#64748b';
+    renderCurrentTree();
+}
+
+function renderCurrentTree() {
+    const diagram = document.getElementById('treeDiagram');
+    if (currentViewMode === 'stepped') {
+        diagram.innerHTML = drawSteppedTree(currentPeopleMap, currentRelationships, currentUnions);
+    } else {
+        diagram.innerHTML = drawExactTree(currentPeopleMap, currentRelationships, currentUnions);
+    }
+}
 
 async function loadTrees() {
     const res = await fetch('/api/trees');
@@ -110,7 +127,7 @@ async function loadTreeData() {
     currentRelationships = data.relationships;
     currentUnions = data.unions || [];
     data.people.forEach(p => { currentPeopleMap[p.person_id] = p; });
-    document.getElementById('treeDiagram').innerHTML = drawExactTree(currentPeopleMap, currentRelationships, currentUnions);
+    renderCurrentTree();
 }
 
 async function savePerson() {
