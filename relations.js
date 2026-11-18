@@ -9,6 +9,26 @@ function openContextMenu(e, personId) {
     menu.style.top = Math.min(e.clientY, window.innerHeight - 380) + 'px';
 }
 
+async function shiftAllDownExcept(topPersonId) {
+    const allPeople = Object.values(currentPeopleMap);
+    for (const other of allPeople) {
+        if (other.person_id === topPersonId) continue;
+        const otherG = lastComputedGen[other.person_id] !== undefined ? lastComputedGen[other.person_id] : 0;
+        await fetch('/api/individuals/' + other.person_id + '/gen', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ manual_gen: otherG + 1 })
+        });
+    }
+    if (topPersonId) {
+        await fetch('/api/individuals/' + topPersonId + '/gen', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ manual_gen: 0 })
+        });
+    }
+}
+
 async function movePersonGeneration(delta) {
     const pid = contextTargetPersonId;
     const p = currentPeopleMap[pid];
@@ -26,18 +46,8 @@ async function movePersonGeneration(delta) {
 
     const currentGen = lastComputedGen[pid] !== undefined ? lastComputedGen[pid] : 0;
 
-    // אם מעלים למעלה מישהו שכבר נמצא בראש האילן (דור 1), מורידים את כל השאר דור למטה
     if (delta < 0 && currentGen === 0) {
-        const allPeople = Object.values(currentPeopleMap);
-        for (const other of allPeople) {
-            const otherG = lastComputedGen[other.person_id] !== undefined ? lastComputedGen[other.person_id] : 0;
-            const newG = other.person_id === pid ? 0 : otherG + 1;
-            await fetch('/api/individuals/' + other.person_id + '/gen', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ manual_gen: newG })
-            });
-        }
+        await shiftAllDownExcept(pid);
         loadTreeData();
         return;
     }
@@ -100,9 +110,29 @@ function startRelativeAdd(relType) {
 
 async function applyRelationBetween(relType, targetId, otherPersonId) {
     if (relType === 'father' || relType === 'mother') {
-        await fetch('/api/trees/' + currentTreeId + '/relationships', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ parent_id: otherPersonId, child_id: targetId }) });
+        await fetch('/api/trees/' + currentTreeId + '/relationships', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ parent_id: otherPersonId, child_id: targetId })
+        });
+        const childGen = lastComputedGen[targetId] !== undefined ? lastComputedGen[targetId] : 0;
+        if (childGen === 0) {
+            await shiftAllDownExcept(otherPersonId);
+        } else {
+            await fetch('/api/individuals/' + otherPersonId + '/gen', {
+                method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ manual_gen: childGen - 1 })
+            });
+        }
     } else if (relType === 'son' || relType === 'daughter') {
-        await fetch('/api/trees/' + currentTreeId + '/relationships', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ parent_id: targetId, child_id: otherPersonId }) });
+        await fetch('/api/trees/' + currentTreeId + '/relationships', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ parent_id: targetId, child_id: otherPersonId })
+        });
+        const parentGen = lastComputedGen[targetId] !== undefined ? lastComputedGen[targetId] : 0;
+        await fetch('/api/individuals/' + otherPersonId + '/gen', {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ manual_gen: parentGen + 1 })
+        });
     } else if (relType === 'brother' || relType === 'sister') {
         const parents = currentRelationships.filter(r => r.child_id === targetId).map(r => r.parent_id);
         if (parents.length === 0) {
@@ -127,9 +157,22 @@ async function applyRelationBetween(relType, targetId, otherPersonId) {
                 await fetch('/api/trees/' + currentTreeId + '/relationships', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ parent_id: pid, child_id: otherPersonId }) });
             }
         }
+        const siblingGen = lastComputedGen[targetId] !== undefined ? lastComputedGen[targetId] : 0;
+        await fetch('/api/individuals/' + otherPersonId + '/gen', {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ manual_gen: siblingGen })
+        });
     } else if (relType === 'spouse_married' || relType === 'spouse_divorced') {
         const status = relType === 'spouse_divorced' ? 'divorced' : 'married';
-        await fetch('/api/trees/' + currentTreeId + '/unions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ partner_1_id: targetId, partner_2_id: otherPersonId, union_status: status }) });
+        await fetch('/api/trees/' + currentTreeId + '/unions', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ partner_1_id: targetId, partner_2_id: otherPersonId, union_status: status })
+        });
+        const partnerGen = lastComputedGen[targetId] !== undefined ? lastComputedGen[targetId] : 0;
+        await fetch('/api/individuals/' + otherPersonId + '/gen', {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ manual_gen: partnerGen })
+        });
     }
 }
 
@@ -162,34 +205,3 @@ function openDisconnectModal() {
     myParents.forEach(r => {
         const parent = currentPeopleMap[r.parent_id];
         if (parent) {
-            list.innerHTML += '<div class="rel-row"><span>⬆️ הורה: <strong>' + formatFullName(parent) + '</strong></span>' +
-                '<button type="button" onclick="removeRel(\'' + r.parent_id + '\', \'' + pid + '\')" style="background:#dc2626; padding:4px 10px; font-size:12px;">נתק</button></div>';
-        }
-    });
-
-    const myChildren = currentRelationships.filter(r => r.parent_id === pid);
-    myChildren.forEach(r => {
-        const child = currentPeopleMap[r.child_id];
-        if (child) {
-            list.innerHTML += '<div class="rel-row"><span>⬇️ ילד/ה: <strong>' + formatFullName(child) + '</strong></span>' +
-                '<button type="button" onclick="removeRel(\'' + pid + '\', \'' + r.child_id + '\')" style="background:#dc2626; padding:4px 10px; font-size:12px;">נתק</button></div>';
-        }
-    });
-
-    if (!list.innerHTML) list.innerHTML = '<p>אין קשרים מחוברים לאדם זה.</p>';
-    document.getElementById('disconnectModal').style.display = 'flex';
-}
-
-async function removeUnion(unionId) {
-    await fetch('/api/unions/' + unionId, { method: 'DELETE' });
-    document.getElementById('disconnectModal').style.display = 'none';
-    loadTreeData();
-}
-
-async function removeRel(parentId, childId) {
-    await fetch('/api/trees/' + currentTreeId + '/relationships', {
-        method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ parent_id: parentId, child_id: childId })
-    });
-    document.getElementById('disconnectModal').style.display = 'none';
-    loadTreeData();
-}
