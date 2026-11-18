@@ -1,4 +1,10 @@
 let focusedPersonId = null;
+let extraEmptyRows = 0;
+
+function addExtraGenerationRow() {
+    extraEmptyRows += 1;
+    renderCurrentTree();
+}
 
 function focusOnBranch() {
     focusedPersonId = contextTargetPersonId;
@@ -73,7 +79,11 @@ function drawExactTree(allPeopleMap, relationships, unionsList) {
 
     const gen = computeExactGenerations(people, relationships, unionsList);
     const byGen = {};
-    people.forEach(p => { const g = gen[p.person_id]; if (!byGen[g]) byGen[g] = []; byGen[g].push(p.person_id); });
+    people.forEach(p => {
+        const g = gen[p.person_id];
+        if (!byGen[g]) byGen[g] = [];
+        byGen[g].push(p.person_id);
+    });
 
     const parentsByChild = {};
     relationships.forEach(r => {
@@ -94,10 +104,10 @@ function drawExactTree(allPeopleMap, relationships, unionsList) {
         return pos[pIds.at(0)].x + cardW / 2;
     }
 
-    const genKeys = Object.keys(byGen).map(Number).sort((a, b) => a - b);
+    const maxGenIndex = Math.max(...Object.values(gen), 0) + extraEmptyRows;
 
-    genKeys.forEach((g, rowIdx) => {
-        const ids = byGen[g];
+    for (let g = 0; g <= maxGenIndex; g++) {
+        const ids = byGen[g] || [];
         const ordered = [];
         const sortedIds = [...ids].sort((a, b) => {
             const ax = getAnchorX(a), bx = getAnchorX(b);
@@ -115,24 +125,25 @@ function drawExactTree(allPeopleMap, relationships, unionsList) {
             married.forEach(mid => { if (ids.includes(mid) && !globalPlaced.has(mid)) { ordered.push(mid); globalPlaced.add(mid); } });
         });
 
-        const rowW = ordered.length * cardW + (ordered.length - 1) * gapX;
+        const rowW = ordered.length * cardW + Math.max(0, ordered.length - 1) * gapX;
         if (rowW + labelW + 100 > maxW) maxW = rowW + labelW + 100;
         ordered.forEach((id, idx) => {
-            pos[id] = { x: 40 + idx * (cardW + gapX), y: 24 + rowIdx * rowStepY, rowW };
+            pos[id] = { x: 40 + idx * (cardW + gapX), y: 24 + g * rowStepY, rowW };
         });
-    });
+    }
 
     const contentAreaW = maxW - labelW - 40;
     Object.values(pos).forEach(p => { p.x += (contentAreaW - p.rowW) / 2; });
-    const totalH = genKeys.length * rowStepY + 20;
+    const totalRows = maxGenIndex + 1;
+    const totalH = totalRows * rowStepY + 20;
 
     let bandsHtml = '';
-    genKeys.forEach((g, rowIdx) => {
-        const bandTop = rowIdx * rowStepY;
-        const bg = rowIdx % 2 === 0 ? '#f8fafc' : '#ffffff';
+    for (let g = 0; g < totalRows; g++) {
+        const bandTop = g * rowStepY;
+        const bg = g % 2 === 0 ? '#f8fafc' : '#ffffff';
         bandsHtml += '<div class="gen-band" style="top:' + bandTop + 'px; height:' + rowStepY + 'px; width:' + maxW + 'px; background:' + bg + ';">' +
-            '<div class="gen-label">דור ' + (rowIdx + 1) + '</div></div>';
-    });
+            '<div class="gen-label">דור ' + (g + 1) + '</div></div>';
+    }
 
     const svg = renderTreeSvg(maxW, totalH, pos, cardW, cardH, unionsList, parentsByChild);
     const cardsHtml = people.filter(p => pos[p.person_id]).map(p => buildPersonCardHTML(p, pos[p.person_id].x, pos[p.person_id].y)).join('');
