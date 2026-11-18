@@ -13,8 +13,36 @@ async function movePersonGeneration(delta) {
     const pid = contextTargetPersonId;
     const p = currentPeopleMap[pid];
     if (!p) return;
+
+    if (delta === 0) {
+        await fetch('/api/individuals/' + pid + '/gen', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ manual_gen: null })
+        });
+        loadTreeData();
+        return;
+    }
+
     const currentGen = lastComputedGen[pid] !== undefined ? lastComputedGen[pid] : 0;
-    const nextGen = delta === 0 ? null : Math.max(0, currentGen + delta);
+
+    // אם מעלים למעלה מישהו שכבר נמצא בראש האילן (דור 1), מורידים את כל השאר דור למטה
+    if (delta < 0 && currentGen === 0) {
+        const allPeople = Object.values(currentPeopleMap);
+        for (const other of allPeople) {
+            const otherG = lastComputedGen[other.person_id] !== undefined ? lastComputedGen[other.person_id] : 0;
+            const newG = other.person_id === pid ? 0 : otherG + 1;
+            await fetch('/api/individuals/' + other.person_id + '/gen', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ manual_gen: newG })
+            });
+        }
+        loadTreeData();
+        return;
+    }
+
+    const nextGen = Math.max(0, currentGen + delta);
     await fetch('/api/individuals/' + pid + '/gen', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
