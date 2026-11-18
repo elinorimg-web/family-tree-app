@@ -86,7 +86,6 @@
     </div>
 </div>
 
-<!-- תפריט קליק ימני צף -->
 <div id="contextMenu" class="no-print" style="display:none; position:fixed; background:white; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 4px 15px rgba(0,0,0,0.15); z-index:1000; min-width:205px; overflow:hidden;">
     <div style="background:#f1f5f9; padding:8px 12px; font-size:12px; font-weight:bold; color:#475569; border-bottom:1px solid #e2e8f0;" id="ctxHeader">הוספת/חיבור קרוב</div>
     <div class="ctx-item" onclick="startRelativeAdd('spouse_married')">💍 הוסף/חבר בן/בת זוג (נשואים)</div>
@@ -100,7 +99,6 @@
     <div class="ctx-item" style="color:#dc2626; background:#fef2f2;" onclick="openDisconnectModal()">✂️ נתק קשרים (זוגיות / הורים)</div>
 </div>
 
-<!-- חלונית סיפור חיים -->
 <div id="bioModal" class="modal-backdrop no-print" onclick="if(event.target===this) this.style.display='none'">
     <div class="modal-box">
         <h3 id="bioTitle" style="margin-top:0; color:#1a56db;"></h3>
@@ -109,7 +107,6 @@
     </div>
 </div>
 
-<!-- חלונית ניתוק קשרים -->
 <div id="disconnectModal" class="modal-backdrop no-print" onclick="if(event.target===this) this.style.display='none'">
     <div class="modal-box">
         <h3 id="discTitle" style="margin-top:0; color:#dc2626;"></h3>
@@ -118,6 +115,7 @@
     </div>
 </div>
 
+<script src="modal.js"></script>
 <script src="ui.js"></script>
 <script src="relations.js"></script>
 <script src="app.js"></script>
