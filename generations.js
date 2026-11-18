@@ -1,3 +1,5 @@
+let lastComputedGen = {};
+
 function computeExactGenerations(people, relationships, unionsList) {
     const ids = new Set(people.map(p => p.person_id));
     const validRels = relationships.filter(r => ids.has(r.parent_id) && ids.has(r.child_id));
@@ -6,7 +8,6 @@ function computeExactGenerations(people, relationships, unionsList) {
     const gen = {};
     people.forEach(p => gen[p.person_id] = 0);
 
-    // שלב 1: כל צאצא חייב להיות לפחות דור אחד מתחת לכל הורה שלו
     for (let i = 0; i < people.length * 4; i++) {
         let changed = false;
         validRels.forEach(r => {
@@ -26,7 +27,6 @@ function computeExactGenerations(people, relationships, unionsList) {
         if (!changed) break;
     }
 
-    // שלב 2: הורים שאין להם הורים משלהם נמשכים מטה לשבת בדיוק דור אחד מעל ילדיהם
     for (let i = 0; i < people.length * 2; i++) {
         let pulled = false;
         people.forEach(p => {
@@ -53,7 +53,19 @@ function computeExactGenerations(people, relationships, unionsList) {
         if (!pulled) break;
     }
 
-    const minG = Math.min(...Object.values(gen));
-    Object.keys(gen).forEach(id => { gen[id] -= minG; });
+    const minAutoG = Math.min(...Object.values(gen));
+    Object.keys(gen).forEach(id => { gen[id] -= minAutoG; });
+
+    // החלת מיקום דור ידני אם הוגדר למשתמש
+    people.forEach(p => {
+        if (p.manual_gen !== null && p.manual_gen !== undefined) {
+            gen[p.person_id] = Number(p.manual_gen);
+        }
+    });
+
+    const minFinalG = Math.min(...Object.values(gen));
+    Object.keys(gen).forEach(id => { gen[id] -= minFinalG; });
+
+    lastComputedGen = { ...gen };
     return gen;
 }
