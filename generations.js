@@ -56,15 +56,12 @@ function computeExactGenerations(people, relationships, unionsList) {
     const minAutoG = Math.min(...Object.values(gen));
     Object.keys(gen).forEach(id => { gen[id] -= minAutoG; });
 
-    // החלת מיקום דור ידני אם הוגדר למשתמש
+    // החלת דור ידני קבוע ללא הזזת שאר האילן
     people.forEach(p => {
         if (p.manual_gen !== null && p.manual_gen !== undefined) {
-            gen[p.person_id] = Number(p.manual_gen);
+            gen[p.person_id] = Math.max(0, Number(p.manual_gen));
         }
     });
-
-    const minFinalG = Math.min(...Object.values(gen));
-    Object.keys(gen).forEach(id => { gen[id] -= minFinalG; });
 
     lastComputedGen = { ...gen };
     return gen;
